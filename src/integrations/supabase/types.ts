@@ -202,6 +202,7 @@ export type Database = {
           avatar_type: string | null
           avatar_value: string | null
           created_at: string | null
+          default_category_id: string | null
           display_name: string
           id: string
           last_recorded_moment_at: string | null
@@ -213,6 +214,7 @@ export type Database = {
           avatar_type?: string | null
           avatar_value?: string | null
           created_at?: string | null
+          default_category_id?: string | null
           display_name: string
           id?: string
           last_recorded_moment_at?: string | null
@@ -224,6 +226,7 @@ export type Database = {
           avatar_type?: string | null
           avatar_value?: string | null
           created_at?: string | null
+          default_category_id?: string | null
           display_name?: string
           id?: string
           last_recorded_moment_at?: string | null
@@ -231,6 +234,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "people_default_category_id_fkey"
+            columns: ["default_category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "people_merged_into_fkey"
             columns: ["merged_into"]
@@ -432,6 +442,16 @@ export type Database = {
           current: number
           last_entry_date: string
         }[]
+      }
+      create_moment_quick: {
+        Args: {
+          p_action?: Database["public"]["Enums"]["action_t"]
+          p_category_id?: string
+          p_description: string
+          p_happened_at?: string
+          p_person_id?: string
+        }
+        Returns: string
       }
       given_received_by_category: {
         Args: { _from: string; _to: string; _user: string }

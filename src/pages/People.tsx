@@ -139,7 +139,7 @@ export const People: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 flex items-center gap-2"
+                      className="flex items-center gap-1 text-xs px-2 py-1 h-8"
                       onClick={(e) => handleLogMoment(e, person)}
                     >
                       <MessageSquare className="h-3 w-3" />
@@ -148,7 +148,7 @@ export const People: React.FC = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 flex items-center gap-2"
+                      className="flex items-center gap-1 text-xs px-2 py-1 h-8"
                       onClick={(e) => handleAddToGroup(e, person)}
                     >
                       <Group className="h-3 w-3" />
@@ -185,6 +185,7 @@ export const People: React.FC = () => {
           setSelectedPerson(null);
         }}
         seedPerson={selectedPerson?.display_name}
+        seedCategory={selectedPerson?.default_category_id}
       />
 
       {selectedPerson && (
