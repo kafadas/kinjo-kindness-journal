@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-import { Search, Plus, User, HelpCircle } from 'lucide-react';
+import { Search, Plus, User, HelpCircle, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useNavigate } from 'react-router-dom';
 import { CaptureModal } from '@/components/modals/CaptureModal';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/hooks/useAuth';
+import { signOut } from '@/lib/auth';
+import { useToast } from '@/hooks/use-toast';
 
 export const TopBar: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [isCaptureModalOpen, setIsCaptureModalOpen] = useState(false);
 
   const handleSearchClick = () => {
@@ -25,6 +30,23 @@ export const TopBar: React.FC = () => {
 
   const handleHelpClick = () => {
     // TODO: Implement help/support modal or page
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: 'Logged out',
+        description: 'You have been successfully logged out.',
+      });
+      navigate('/');
+    } catch (error) {
+      toast({
+        title: 'Logout failed',
+        description: 'Failed to log out. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -70,6 +92,17 @@ export const TopBar: React.FC = () => {
           >
             <HelpCircle className="h-4 w-4" />
           </Button>
+          
+          {isAuthenticated && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="p-2"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </header>
 

@@ -73,7 +73,17 @@ serve(async (req) => {
 
     // For now, create a simple moment record
     // TODO: Implement AI parsing to extract person, action, category, etc.
-    const momentData = {
+    const momentData: {
+      user_id: string;
+      description: string;
+      happened_at: string;
+      action: 'given' | 'received';
+      source: string;
+      significance: boolean;
+      tags: string[];
+      category_id?: string;
+      person_id?: string;
+    } = {
       user_id: user.id,
       description: text.trim(),
       happened_at: new Date().toISOString(),
@@ -142,7 +152,12 @@ serve(async (req) => {
 
     if (insertError) {
       console.error('Error creating moment:', insertError)
-      return new Response(JSON.stringify({ error: 'Failed to create moment' }), {
+      console.error('Moment data that failed:', momentData)
+      return new Response(JSON.stringify({ 
+        error: 'Failed to create moment', 
+        details: insertError.message,
+        code: insertError.code 
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
