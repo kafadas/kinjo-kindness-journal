@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Heart, Edit, MoreHorizontal, MessageSquare, Merge } from 'lucide-react';
+import { ArrowLeft, Heart, Edit, MoreHorizontal, MessageSquare, Merge, Group } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
 import { maskName, maskDescription, getDiscreetClasses } from '@/lib/discreetMode';
 import { usePersonDetails } from '@/hooks/usePeople';
 import { MergePeopleModal } from '@/components/modals/MergePeopleModal';
+import { AddToGroupModal } from '@/components/modals/AddToGroupModal';
+import { CaptureModal } from '@/components/modals/CaptureModal';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingGrid } from '@/components/ui/loading-card';
 import { formatDistanceToNow } from 'date-fns';
@@ -17,6 +19,8 @@ export const PersonDetails: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { isDiscreetMode } = useDiscreetMode();
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [addToGroupOpen, setAddToGroupOpen] = useState(false);
 
   const { person, moments, stats, isLoading } = usePersonDetails(id!);
 
@@ -72,9 +76,21 @@ export const PersonDetails: React.FC = () => {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setCaptureOpen(true)}
+              >
                 <MessageSquare className="h-4 w-4 mr-1" />
                 Log Moment
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setAddToGroupOpen(true)}
+              >
+                <Group className="h-4 w-4 mr-1" />
+                Add to Group
               </Button>
               <MergePeopleModal person={person}>
                 <Button variant="outline" size="sm">
@@ -175,6 +191,20 @@ export const PersonDetails: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modals */}
+      <CaptureModal
+        isOpen={captureOpen}
+        onClose={() => setCaptureOpen(false)}
+        seedPerson={person?.display_name}
+      />
+
+      <AddToGroupModal
+        isOpen={addToGroupOpen}
+        onClose={() => setAddToGroupOpen(false)}
+        personId={person.id}
+        personName={person.display_name}
+      />
     </div>
   );
 };

@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Search, Plus, ArrowRight, MessageSquare } from 'lucide-react';
+import { Heart, Search, Plus, ArrowRight, MessageSquare, Group } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
 import { maskName, getDiscreetClasses } from '@/lib/discreetMode';
 import { usePeople } from '@/hooks/usePeople';
 import { AddPersonModal } from '@/components/modals/AddPersonModal';
 import { CaptureModal } from '@/components/modals/CaptureModal';
+import { AddToGroupModal } from '@/components/modals/AddToGroupModal';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingGrid } from '@/components/ui/loading-card';
 import { formatDistanceToNow } from 'date-fns';
@@ -21,6 +22,7 @@ export const People: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [captureOpen, setCaptureOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<any>(null);
+  const [addToGroupOpen, setAddToGroupOpen] = useState(false);
   
   const { people, isLoading, searchPeople } = usePeople();
 
@@ -34,6 +36,12 @@ export const People: React.FC = () => {
     e.stopPropagation();
     setSelectedPerson(person);
     setCaptureOpen(true);
+  };
+
+  const handleAddToGroup = (e: React.MouseEvent, person: any) => {
+    e.stopPropagation();
+    setSelectedPerson(person);
+    setAddToGroupOpen(true);
   };
 
   const getInitials = (name: string) => {
@@ -127,15 +135,26 @@ export const People: React.FC = () => {
                     </span>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full flex items-center gap-2"
-                    onClick={(e) => handleLogMoment(e, person)}
-                  >
-                    <MessageSquare className="h-3 w-3" />
-                    Log Moment
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 flex items-center gap-2"
+                      onClick={(e) => handleLogMoment(e, person)}
+                    >
+                      <MessageSquare className="h-3 w-3" />
+                      Log Moment
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 flex items-center gap-2"
+                      onClick={(e) => handleAddToGroup(e, person)}
+                    >
+                      <Group className="h-3 w-3" />
+                      Add to Group
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -156,6 +175,28 @@ export const People: React.FC = () => {
         >
           {!searchTerm && <AddPersonModal />}
         </EmptyState>
+      )}
+
+      {/* Modals */}
+      <CaptureModal
+        isOpen={captureOpen}
+        onClose={() => {
+          setCaptureOpen(false);
+          setSelectedPerson(null);
+        }}
+        seedPerson={selectedPerson?.display_name}
+      />
+
+      {selectedPerson && (
+        <AddToGroupModal
+          isOpen={addToGroupOpen}
+          onClose={() => {
+            setAddToGroupOpen(false);
+            setSelectedPerson(null);
+          }}
+          personId={selectedPerson.id}
+          personName={selectedPerson.display_name}
+        />
       )}
     </div>
   );

@@ -5,7 +5,8 @@ import {
   Users, 
   Folder, 
   TrendingUp, 
-  BookOpen 
+  BookOpen,
+  Group
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ const navItems = [
   { title: 'Home', url: '/home', icon: Home },
   { title: 'Timeline', url: '/timeline', icon: Clock },
   { title: 'People', url: '/people', icon: Users },
+  { title: 'Groups', url: '/groups', icon: Group },
   { title: 'Categories', url: '/categories', icon: Folder },
   { title: 'Trends', url: '/trends', icon: TrendingUp },
   { title: 'Reflection', url: '/reflection', icon: BookOpen },

@@ -127,10 +127,13 @@ export const useGroups = () => {
     isLoading,
     error,
     createGroup: createGroupMutation.mutate,
+    createGroupAsync: createGroupMutation.mutateAsync,
     isCreating: createGroupMutation.isPending,
     deleteGroup: deleteGroupMutation.mutate,
     isDeleting: deleteGroupMutation.isPending,
     addPersonToGroup: addPersonToGroupMutation.mutate,
-    removePersonFromGroup: removePersonFromGroupMutation.mutate
+    addPersonToGroupAsync: addPersonToGroupMutation.mutateAsync,
+    removePersonFromGroup: removePersonFromGroupMutation.mutate,
+    removePersonFromGroupAsync: removePersonFromGroupMutation.mutateAsync
   }
 }
