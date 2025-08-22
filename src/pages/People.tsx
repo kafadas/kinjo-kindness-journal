@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, Search, Plus, ArrowRight, MessageSquare, Group } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
-import { maskName, getDiscreetClasses } from '@/lib/discreetMode';
+import { DiscreetText } from '@/components/ui/DiscreetText';
 import { usePeople } from '@/hooks/usePeople';
 import { AddPersonModal } from '@/components/modals/AddPersonModal';
 import { CaptureModal } from '@/components/modals/CaptureModal';
@@ -110,8 +110,8 @@ export const People: React.FC = () => {
                     {renderAvatar(person)}
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <CardTitle className={`text-base truncate ${getDiscreetClasses(isDiscreetMode)}`}>
-                      {maskName(person.display_name, isDiscreetMode)}
+                    <CardTitle className="text-base truncate">
+                      <DiscreetText text={person.display_name} variant="name" />
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
                       {person.aliases && person.aliases.length > 0 

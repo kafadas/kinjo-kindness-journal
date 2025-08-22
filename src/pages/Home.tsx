@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Heart, Users, Folder, Clock, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { DiscreetText } from '@/components/ui/DiscreetText';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ export const Home: React.FC = () => {
               Review your recent acts of kindness and reflect on meaningful moments.
             </p>
             <div className="text-xs text-muted-foreground">
-              Latest: "Helped neighbor with groceries" • 2 hours ago
+              <DiscreetText text='Latest: "Helped neighbor with groceries"' variant="body" /> • 2 hours ago
             </div>
           </CardContent>
         </Card>
@@ -91,7 +92,7 @@ export const Home: React.FC = () => {
               Explore connections and the people who bring kindness to your life.
             </p>
             <div className="text-xs text-muted-foreground">
-              Most connected: Sarah, Mom, Alex
+              <DiscreetText text="Most connected: Sarah, Mom, Alex" variant="body" />
             </div>
           </CardContent>
         </Card>

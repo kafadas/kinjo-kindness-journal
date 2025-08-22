@@ -18,7 +18,7 @@ import {
   Square
 } from 'lucide-react';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
-import { maskName, maskDescription, getDiscreetClasses } from '@/lib/discreetMode';
+import { DiscreetText } from '@/components/ui/DiscreetText';
 import { useTimeline, type TimelineFilters } from '@/hooks/useTimeline';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { TimelineFiltersComponent } from '@/components/timeline/TimelineFilters';
@@ -142,9 +142,9 @@ export const Timeline: React.FC = () => {
               </div>
 
               {moment.description && (
-                <p className={`text-foreground mb-3 ${getDiscreetClasses(isDiscreetMode)}`}>
-                  {maskDescription(moment.description, isDiscreetMode)}
-                </p>
+              <p className="text-foreground mb-3">
+                <DiscreetText text={moment.description} variant="body" />
+              </p>
               )}
 
               <div className="flex items-center justify-between">
@@ -160,8 +160,8 @@ export const Timeline: React.FC = () => {
                           </AvatarFallback>
                         )}
                       </Avatar>
-                      <span className={getDiscreetClasses(isDiscreetMode)}>
-                        {maskName(moment.person.display_name, isDiscreetMode)}
+                      <span>
+                        <DiscreetText text={moment.person.display_name} variant="name" />
                       </span>
                     </div>
                   )}

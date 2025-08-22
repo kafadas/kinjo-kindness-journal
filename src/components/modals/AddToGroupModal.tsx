@@ -14,8 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Group } from 'lucide-react';
 import { useGroups } from '@/hooks/useGroups';
-import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
-import { maskName, getDiscreetClasses } from '@/lib/discreetMode';
+import { DiscreetText } from '@/components/ui/DiscreetText';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -38,7 +37,6 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
     addPersonToGroupAsync, 
     removePersonFromGroupAsync 
   } = useGroups();
-  const { isDiscreetMode } = useDiscreetMode();
   const { toast } = useToast();
   
   const [existingGroupIds, setExistingGroupIds] = useState<string[]>([]);
@@ -134,7 +132,7 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
       
       toast({
         title: 'Groups updated',
-        description: `${maskName(personName, isDiscreetMode)}'s group memberships have been updated.`
+        description: `${personName}'s group memberships have been updated.`
       });
       
       onClose();
@@ -165,8 +163,8 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
             <Group className="h-5 w-5 text-primary" />
             Add to Groups
           </DialogTitle>
-          <DialogDescription className={getDiscreetClasses(isDiscreetMode)}>
-            Manage group memberships for {maskName(personName, isDiscreetMode)}
+          <DialogDescription>
+            <DiscreetText text={`Manage group memberships for ${personName}`} variant="body" />
           </DialogDescription>
         </DialogHeader>
 
@@ -193,10 +191,10 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
                         />
                         <Label 
                           htmlFor={`group-${group.id}`} 
-                          className={`flex items-center gap-2 text-sm cursor-pointer ${getDiscreetClasses(isDiscreetMode)}`}
+                          className="flex items-center gap-2 text-sm cursor-pointer"
                         >
                           {group.emoji && <span>{group.emoji}</span>}
-                          <span>{maskName(group.name, isDiscreetMode)}</span>
+                          <DiscreetText text={group.name} variant="name" />
                         </Label>
                       </div>
                     ))}

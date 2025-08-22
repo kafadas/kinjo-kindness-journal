@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Heart, Edit, MoreHorizontal, MessageSquare, Merge, Group } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
-import { maskName, maskDescription, getDiscreetClasses } from '@/lib/discreetMode';
+import { DiscreetText } from '@/components/ui/DiscreetText';
 import { usePersonDetails } from '@/hooks/usePeople';
 import { MergePeopleModal } from '@/components/modals/MergePeopleModal';
 import { AddToGroupModal } from '@/components/modals/AddToGroupModal';
@@ -65,8 +65,8 @@ export const PersonDetails: React.FC = () => {
               )}
             </Avatar>
             <div className="flex-1">
-              <h2 className={`font-display text-xl font-semibold mb-1 ${getDiscreetClasses(isDiscreetMode)}`}>
-                {maskName(person.display_name, isDiscreetMode)}
+              <h2 className="font-display text-xl font-semibold mb-1">
+                <DiscreetText text={person.display_name} variant="name" />
               </h2>
               <p className="text-muted-foreground mb-2">
                 {person.aliases && person.aliases.length > 0 
@@ -175,9 +175,7 @@ export const PersonDetails: React.FC = () => {
                     </span>
                   </div>
                   {moment.description && (
-                    <p className={`text-sm ${getDiscreetClasses(isDiscreetMode)}`}>
-                      {maskDescription(moment.description, isDiscreetMode)}
-                    </p>
+                    <DiscreetText text={moment.description} variant="body" className="text-sm" />
                   )}
                 </div>
               ))}

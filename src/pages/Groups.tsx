@@ -1,34 +1,21 @@
-import React, { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { 
-  Users, Plus, Search, MoreVertical, UserMinus, 
-  UserPlus, Edit, Trash2, Settings
-} from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useGroups } from '@/hooks/useGroups'
-import { usePeople } from '@/hooks/usePeople'
-import { useDiscreetMode } from '@/contexts/DiscreetModeContext'
-import { maskName } from '@/lib/discreetMode'
-import { CreateGroupModal } from '@/components/modals/CreateGroupModal'
-import { DeleteConfirmDialog } from '@/components/modals/DeleteConfirmDialog'
-import { LoadingGrid } from '@/components/ui/loading-card'
-import { EmptyState } from '@/components/ui/empty-state'
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Heart, Search, Plus, MoreHorizontal, Edit, Trash, Trash2, Users, ArrowRight, UserMinus, MoreVertical, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
+import { DiscreetText } from '@/components/ui/DiscreetText';
+import { useGroups } from '@/hooks/useGroups';
+import { usePeople } from '@/hooks/usePeople';
+import { CreateGroupModal } from '@/components/modals/CreateGroupModal';
+import { DeleteConfirmDialog } from '@/components/modals/DeleteConfirmDialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingGrid } from '@/components/ui/loading-card';
 
 export const Groups: React.FC = () => {
   const { 
@@ -165,7 +152,7 @@ export const Groups: React.FC = () => {
                     </div>
                     <div>
                       <CardTitle className="text-base">
-                        {maskName(group.name, isDiscreetMode)}
+                        <DiscreetText text={group.name} variant="name" />
                       </CardTitle>
                       <p className="text-sm text-muted-foreground">
                         {group.people?.length || 0} people
@@ -204,7 +191,7 @@ export const Groups: React.FC = () => {
                       {group.people.slice(0, 3).map((person) => (
                         <div key={person.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
                           <span className="text-sm font-medium">
-                            {maskName(person.display_name, isDiscreetMode)}
+                            <DiscreetText text={person.display_name} variant="name" />
                           </span>
                           <Button
                             size="sm"
@@ -248,7 +235,7 @@ export const Groups: React.FC = () => {
                           <SelectContent>
                             {availablePeople.map((person) => (
                               <SelectItem key={person.id} value={person.id}>
-                                {maskName(person.display_name, isDiscreetMode)}
+                                <DiscreetText text={person.display_name} variant="name" />
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -303,7 +290,7 @@ export const Groups: React.FC = () => {
               {availablePeople.map((person) => (
                 <div key={person.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <span className="font-medium">
-                    {maskName(person.display_name, isDiscreetMode)}
+                    <DiscreetText text={person.display_name} variant="name" />
                   </span>
                   <Select
                     onValueChange={(groupId) => {
@@ -318,7 +305,7 @@ export const Groups: React.FC = () => {
                     <SelectContent>
                       {groups.map((group) => (
                         <SelectItem key={group.id} value={group.id}>
-                          {group.emoji} {maskName(group.name, isDiscreetMode)}
+                          <DiscreetText text={`${group.emoji} ${group.name}`} variant="name" />
                         </SelectItem>
                       ))}
                     </SelectContent>

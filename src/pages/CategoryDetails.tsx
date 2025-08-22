@@ -1,27 +1,20 @@
-import React, { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  ArrowLeft, Heart, Edit, MoreHorizontal, Plus, Search,
-  TrendingUp, Users, Calendar, Tag, Filter
-} from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useCategoryDetails } from '@/hooks/useCategories'
-import { useDiscreetMode } from '@/contexts/DiscreetModeContext'
-import { maskName, maskDescription } from '@/lib/discreetMode'
-import { CaptureModal } from '@/components/modals/CaptureModal'
-import { LoadingCard } from '@/components/ui/loading-card'
-import { EmptyState } from '@/components/ui/empty-state'
-import { format, isToday, isYesterday, subDays } from 'date-fns'
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, Heart, Calendar, Filter, TrendingUp, Users, Plus, Search, MoreHorizontal, Edit, Tag } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
+import { DiscreetText } from '@/components/ui/DiscreetText';
+import { useCategoryDetails } from '@/hooks/useCategories';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingGrid, LoadingCard } from '@/components/ui/loading-card';
+import { CaptureModal } from '@/components/modals/CaptureModal';
+import { formatDistanceToNow, startOfMonth, endOfMonth, subDays, format, isToday, isYesterday } from 'date-fns';
 
 export const CategoryDetails: React.FC = () => {
   const navigate = useNavigate()
@@ -123,7 +116,7 @@ export const CategoryDetails: React.FC = () => {
         </Button>
         <div className="flex-1">
           <h1 className="font-display text-2xl font-semibold">
-            {maskName(category.name, isDiscreetMode)}
+            <DiscreetText text={category.name} variant="name" />
           </h1>
           <p className="text-muted-foreground">
             Category details and timeline
@@ -236,7 +229,7 @@ export const CategoryDetails: React.FC = () => {
                               </Badge>
                               {moment.person && (
                                 <span className="text-xs font-medium">
-                                  {maskName(moment.person.display_name, isDiscreetMode)}
+                                  <DiscreetText text={moment.person.display_name} variant="name" />
                                 </span>
                               )}
                               <span className="text-xs text-muted-foreground ml-auto">
@@ -245,7 +238,7 @@ export const CategoryDetails: React.FC = () => {
                             </div>
                             {moment.description && (
                               <p className="text-sm">
-                                {maskDescription(moment.description, isDiscreetMode)}
+                                <DiscreetText text={moment.description} variant="body" className="text-sm" />
                               </p>
                             )}
                             {moment.tags && moment.tags.length > 0 && (
@@ -298,7 +291,7 @@ export const CategoryDetails: React.FC = () => {
                     person && (
                       <div key={person.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
                         <span className="font-medium">
-                          {maskName(person.display_name, isDiscreetMode)}
+                          <DiscreetText text={person.display_name} variant="name" className="font-medium" />
                         </span>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">

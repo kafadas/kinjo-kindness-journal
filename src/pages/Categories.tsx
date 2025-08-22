@@ -1,29 +1,21 @@
-import React, { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  Heart, Search, Plus, ArrowRight, MoreVertical, 
-  Edit, Trash2, Tag, TrendingUp 
-} from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { useNavigate } from 'react-router-dom'
-import { useCategories } from '@/hooks/useCategories'
-import { useDiscreetMode } from '@/contexts/DiscreetModeContext'
-import { maskName } from '@/lib/discreetMode'
-import { CreateCategoryModal } from '@/components/modals/CreateCategoryModal'
-import { DeleteConfirmDialog } from '@/components/modals/DeleteConfirmDialog'
-import { LoadingGrid, LoadingCard } from '@/components/ui/loading-card'
-import { EmptyState } from '@/components/ui/empty-state'
-import { CaptureModal } from '@/components/modals/CaptureModal'
-import { format, subDays } from 'date-fns'
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, Plus, Folder, Tag, ArrowRight, Edit, Trash2, MoreVertical } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
+import { DiscreetText } from '@/components/ui/DiscreetText';
+import { useCategories } from '@/hooks/useCategories';
+import { CreateCategoryModal } from '@/components/modals/CreateCategoryModal';
+import { DeleteConfirmDialog } from '@/components/modals/DeleteConfirmDialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingGrid } from '@/components/ui/loading-card';
+import { CaptureModal } from '@/components/modals/CaptureModal';
+import { formatDistanceToNow, subDays } from 'date-fns';
 
 export const Categories: React.FC = () => {
   const navigate = useNavigate()
@@ -147,7 +139,7 @@ export const Categories: React.FC = () => {
       {filteredCategories.length > 0 ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCategories.map((category) => {
-            const displayName = maskName(category.name, isDiscreetMode)
+            const displayName = category.name
             
             return (
               <Card 
@@ -162,7 +154,7 @@ export const Categories: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-base cursor-pointer" onClick={() => handleCategoryClick(category.id)}>
-                          {displayName}
+                          <DiscreetText text={displayName} variant="name" />
                         </CardTitle>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
