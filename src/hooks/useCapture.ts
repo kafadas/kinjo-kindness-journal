@@ -21,6 +21,11 @@ export const useCapture = () => {
       console.log('=== Capture Hook Called ===')
       console.log('Input:', { text, seedPerson, seedCategory })
       
+      // Validate input
+      if (!text || text.trim() === '') {
+        throw new Error('Text is required to capture a moment')
+      }
+      
       // Check authentication first
       if (!isAuthenticated || !user || !session) {
         console.error('Authentication check failed:', { 
@@ -31,31 +36,34 @@ export const useCapture = () => {
         throw new Error('You must be logged in to capture moments')
       }
 
-      // Check session expiry
+      // Check session expiry and refresh if needed
       const now = Math.floor(Date.now() / 1000)
-      if (session.expires_at && session.expires_at < now) {
-        console.error('Session expired:', { 
-          expiresAt: session.expires_at, 
-          now 
-        })
-        throw new Error('Your session has expired. Please log in again.')
+      if (session.expires_at && session.expires_at < now + 300) { // Refresh if expiring in 5 minutes
+        console.log('Session expiring soon, refreshing...')
+        const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession()
+        if (refreshError || !newSession) {
+          console.error('Session refresh failed:', refreshError)
+          throw new Error('Your session has expired. Please log in again.')
+        }
+        console.log('Session refreshed successfully')
       }
 
-      const requestBody = { text, seedPerson, seedCategory }
+      const requestBody = { text: text.trim(), seedPerson, seedCategory }
       console.log('=== Making API Call ===')
       console.log('Auth status:', { 
         isAuthenticated, 
         userId: user.id, 
         sessionExpiresAt: session.expires_at,
-        hasAccessToken: !!session.access_token
+        hasAccessToken: !!session.access_token,
+        tokenLength: session.access_token?.length
       })
-      console.log('Request body:', requestBody)
+      console.log('Request body stringified:', JSON.stringify(requestBody))
+      console.log('Request body size:', new Blob([JSON.stringify(requestBody)]).size, 'bytes')
 
       const { data, error } = await supabase.functions.invoke('capture-text', {
         body: requestBody,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
         },
       })
 

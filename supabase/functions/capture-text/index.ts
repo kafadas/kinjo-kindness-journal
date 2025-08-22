@@ -92,18 +92,52 @@ serve(async (req) => {
 
     // Parse request body with comprehensive debugging
     console.log('=== Request Body Processing ===')
+    
+    // First check content-type and content-length
+    const contentType = req.headers.get('content-type')
+    const contentLength = req.headers.get('content-length')
+    console.log('Content-Type header:', contentType)
+    console.log('Content-Length header:', contentLength)
+    
     let requestBody: CaptureRequest
     try {
-      const bodyText = await req.text()
+      // Clone the request to avoid consuming the body
+      const clonedReq = req.clone()
+      const bodyText = await clonedReq.text()
       console.log('Raw body length:', bodyText?.length || 0)
-      console.log('Raw body content:', bodyText || 'EMPTY')
+      console.log('Raw body content (first 500 chars):', bodyText ? bodyText.substring(0, 500) : 'EMPTY')
       console.log('Body type:', typeof bodyText)
       
+      // If body is empty, try alternative reading methods
       if (!bodyText || bodyText.trim() === '') {
-        console.error('Request body is empty or null')
+        console.log('Body appears empty, trying alternative methods...')
+        
+        try {
+          const arrayBuffer = await req.arrayBuffer()
+          console.log('ArrayBuffer length:', arrayBuffer.byteLength)
+          
+          if (arrayBuffer.byteLength > 0) {
+            const decoder = new TextDecoder()
+            const decodedBody = decoder.decode(arrayBuffer)
+            console.log('Decoded from ArrayBuffer:', decodedBody)
+            console.log('Decoded body length:', decodedBody.length)
+          }
+        } catch (abError) {
+          console.log('ArrayBuffer read failed:', abError.message)
+        }
+      }
+      
+      if (!bodyText || bodyText.trim() === '') {
+        console.error('Request body is empty or null after all attempts')
         return new Response(JSON.stringify({ 
           error: 'Request body is required',
-          code: 'EMPTY_BODY'
+          code: 'EMPTY_BODY',
+          debug: {
+            contentType,
+            contentLength,
+            method: req.method,
+            url: req.url
+          }
         }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -111,7 +145,7 @@ serve(async (req) => {
       }
       
       requestBody = JSON.parse(bodyText)
-      console.log('Parsed request body:', requestBody)
+      console.log('Parsed request body successfully:', requestBody)
       
     } catch (parseError) {
       console.error('JSON parsing error:', parseError)
