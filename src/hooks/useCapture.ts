@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
 
 interface CaptureData {
@@ -11,21 +12,40 @@ interface CaptureData {
 export const useCapture = () => {
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+  const { user, session, isAuthenticated } = useAuth()
 
   const capture = async ({ text, seedPerson, seedCategory }: CaptureData) => {
     setLoading(true)
 
     try {
+      // Check authentication first
+      if (!isAuthenticated || !user || !session) {
+        console.error('Capture attempt without authentication:', { isAuthenticated, user: !!user, session: !!session })
+        throw new Error('You must be logged in to capture moments')
+      }
+
+      const requestBody = { text, seedPerson, seedCategory }
+      console.log('Capture request - Auth status:', { 
+        isAuthenticated, 
+        userId: user.id, 
+        hasSession: !!session,
+        requestBody 
+      })
+
       const { data, error } = await supabase.functions.invoke('capture-text', {
-        body: { text, seedPerson, seedCategory },
+        body: requestBody,
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
       })
 
       if (error) {
+        console.error('Supabase function invoke error:', error)
         throw error
       }
+
+      console.log('Capture response received:', data)
 
       toast({
         title: 'Moment captured!',
@@ -35,9 +55,20 @@ export const useCapture = () => {
       return data
     } catch (err: any) {
       console.error('Error capturing moment:', err)
+      
+      let errorMessage = 'Failed to capture moment. Please try again.'
+      
+      if (err.message?.includes('logged in')) {
+        errorMessage = 'Please log in to capture moments.'
+      } else if (err.message?.includes('Unauthorized')) {
+        errorMessage = 'Authentication failed. Please refresh and try again.'
+      } else if (err.message?.includes('Invalid request')) {
+        errorMessage = 'Invalid request. Please check your input.'
+      }
+      
       toast({
         title: 'Capture failed',
-        description: err.message || 'Failed to capture moment. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       })
       throw err
