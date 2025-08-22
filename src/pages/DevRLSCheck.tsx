@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
+import { createPerson, createMoment, getCategories, getCurrentUserId } from '@/lib/db'
 
 interface TestResult {
   test: string
@@ -18,6 +19,7 @@ export const DevRLSCheck = () => {
   const { user } = useAuth()
   const [results, setResults] = useState<TestResult[]>([])
   const [isRunning, setIsRunning] = useState(false)
+  const [isInsertingSample, setIsInsertingSample] = useState(false)
 
   const updateResult = (index: number, status: 'success' | 'error', message: string, data?: any) => {
     setResults(prev => prev.map((result, i) => 
@@ -123,6 +125,163 @@ export const DevRLSCheck = () => {
     setResults([])
   }
 
+  const insertSampleData = async () => {
+    if (!user || !import.meta.env.DEV) {
+      toast.error('Sample data insertion is only available in development')
+      return
+    }
+
+    setIsInsertingSample(true)
+    try {
+      const userId = await getCurrentUserId()
+      if (!userId) throw new Error('Not authenticated')
+
+      // Get existing categories to use Family and Work
+      const categories = await getCategories()
+      const familyCategory = categories.find(c => c.slug === 'family')
+      const workCategory = categories.find(c => c.slug === 'work')
+      
+      if (!familyCategory || !workCategory) {
+        throw new Error('Family or Work category not found')
+      }
+
+      // Create sample people (use raw supabase for consistency with direct user_id)
+      const { data: alex, error: alexError } = await supabase
+        .from('people')
+        .insert({
+          display_name: 'Alex',
+          avatar_type: 'initials',
+          aliases: ['alex', 'al'],
+          user_id: userId
+        })
+        .select()
+        .single()
+      
+      if (alexError) throw alexError
+
+      const { data: jamie, error: jamieError } = await supabase
+        .from('people')
+        .insert({
+          display_name: 'Jamie',
+          avatar_type: 'initials', 
+          aliases: ['jamie', 'j'],
+          user_id: userId
+        })
+        .select()
+        .single()
+      
+      if (jamieError) throw jamieError
+
+      // Create Friends group
+      const { data: friendsGroup, error: groupError } = await supabase
+        .from('groups')
+        .insert({
+          name: 'Friends',
+          emoji: '👥',
+          user_id: userId,
+          sort_order: 0
+        })
+        .select()
+        .single()
+
+      if (groupError) throw groupError
+
+      // Associate people with Friends group
+      await supabase.from('person_groups').insert([
+        { person_id: alex.id, group_id: friendsGroup.id },
+        { person_id: jamie.id, group_id: friendsGroup.id }
+      ])
+
+      // Create sample moments over last 45 days
+      const now = new Date()
+      const sampleMoments = [
+        {
+          description: 'Called to check in and catch up',
+          person_id: alex.id,
+          category_id: familyCategory.id,
+          action: 'given' as const,
+          happened_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          tags: ['seed', 'demo'],
+          significance: true
+        },
+        {
+          description: 'Helped with work presentation feedback',
+          person_id: jamie.id,
+          category_id: workCategory.id,
+          action: 'given' as const,
+          happened_at: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          tags: ['seed', 'demo', 'work']
+        },
+        {
+          description: 'Received thoughtful birthday message',
+          person_id: alex.id,
+          category_id: familyCategory.id,
+          action: 'received' as const,
+          happened_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+          tags: ['seed', 'demo'],
+          significance: true
+        },
+        {
+          description: 'Grabbed coffee and shared career advice',
+          person_id: jamie.id,
+          category_id: workCategory.id,
+          action: 'received' as const,
+          happened_at: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+          tags: ['seed', 'demo']
+        },
+        {
+          description: 'Sent encouraging text during difficult time',
+          person_id: alex.id,
+          category_id: familyCategory.id,
+          action: 'given' as const,
+          happened_at: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+          tags: ['seed', 'demo']
+        },
+        {
+          description: 'Collaborated on project proposal',
+          person_id: jamie.id,
+          category_id: workCategory.id,
+          action: 'given' as const,
+          happened_at: new Date(now.getTime() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+          tags: ['seed', 'demo', 'collaboration']
+        },
+        {
+          description: 'Received helpful book recommendation',
+          person_id: alex.id,
+          category_id: familyCategory.id,
+          action: 'received' as const,
+          happened_at: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          tags: ['seed', 'demo']
+        },
+        {
+          description: 'Shared lunch and discussed weekend plans',
+          person_id: jamie.id,
+          category_id: workCategory.id,
+          action: 'received' as const,
+          happened_at: new Date(now.getTime() - 35 * 24 * 60 * 60 * 1000).toISOString(),
+          tags: ['seed', 'demo']
+        }
+      ]
+
+      // Insert all moments (use raw supabase for consistency with direct user_id)
+      for (const moment of sampleMoments) {
+        const { error } = await supabase
+          .from('moments')
+          .insert({
+            ...moment,
+            user_id: userId
+          })
+        if (error) throw error
+      }
+
+      toast.success(`Sample data inserted: 2 people, 1 group, ${sampleMoments.length} moments`)
+    } catch (error) {
+      toast.error('Failed to insert sample data: ' + (error as Error).message)
+    } finally {
+      setIsInsertingSample(false)
+    }
+  }
+
   if (!user) {
     return (
       <div className="container mx-auto p-6">
@@ -152,6 +311,15 @@ export const DevRLSCheck = () => {
         <Button variant="outline" onClick={clearResults} disabled={isRunning}>
           Clear Results
         </Button>
+        {import.meta.env.DEV && (
+          <Button 
+            variant="secondary" 
+            onClick={insertSampleData} 
+            disabled={isInsertingSample || isRunning}
+          >
+            {isInsertingSample ? 'Inserting...' : 'Insert Sample Data'}
+          </Button>
+        )}
       </div>
 
       <div className="space-y-4">
