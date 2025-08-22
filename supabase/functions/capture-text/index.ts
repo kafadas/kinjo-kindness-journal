@@ -33,13 +33,33 @@ serve(async (req) => {
     // Get authenticated user
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
     if (authError || !user) {
+      console.error('Auth error:', authError)
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const { text, seedPerson, seedCategory }: CaptureRequest = await req.json()
+    // Parse request body with better error handling
+    let requestBody: CaptureRequest
+    try {
+      const bodyText = await req.text()
+      console.log('Raw request body:', bodyText)
+      
+      if (!bodyText || bodyText.trim() === '') {
+        throw new Error('Request body is empty')
+      }
+      
+      requestBody = JSON.parse(bodyText)
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError)
+      return new Response(JSON.stringify({ error: 'Invalid request body' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const { text, seedPerson, seedCategory } = requestBody
 
     console.log('Capture request:', { text, seedPerson, seedCategory, userId: user.id })
 
