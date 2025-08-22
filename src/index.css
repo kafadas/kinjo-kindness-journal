@@ -1,42 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Caveat:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Kinjo Design System - Calm, minimal, human-first */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core indigo palette for calm, trustworthy feel */
+    --background: 0 0% 99%;
+    --foreground: 240 10% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 240 10% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 240 10% 15%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Indigo primary - calm and trustworthy */
+    --primary: 239 84% 67%;
+    --primary-soft: 240 100% 96%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Soft secondary palette */
+    --secondary: 240 20% 98%;
+    --secondary-foreground: 240 10% 15%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 240 20% 98%;
+    --muted-foreground: 240 5% 50%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Gentle accent colors */
+    --accent: 245 100% 98%;
+    --accent-foreground: 239 84% 67%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Supportive colors */
+    --success: 142 76% 36%;
+    --success-soft: 138 76% 97%;
+    --warning: 38 92% 50%;
+    --warning-soft: 48 100% 96%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Neutral borders and inputs */
+    --border: 240 20% 94%;
+    --input: 240 20% 96%;
+    --ring: 239 84% 67%;
 
-    --radius: 0.5rem;
+    /* Rounded, friendly radius */
+    --radius: 0.75rem;
+
+    /* Kinjo-specific design tokens */
+    --kindness-gradient: linear-gradient(135deg, hsl(239 84% 67%), hsl(250 100% 76%));
+    --reflection-gradient: linear-gradient(180deg, hsl(240 100% 99%), hsl(240 100% 96%));
+    --calm-shadow: 0 4px 20px -4px hsl(239 84% 67% / 0.15);
+    --gentle-shadow: 0 2px 8px -2px hsl(240 20% 50% / 0.08);
+    --depth-shadow: 0 8px 32px -8px hsl(240 20% 50% / 0.12);
+    
+    /* Spacing for generous whitespace */
+    --content-padding: 2rem;
+    --section-gap: 3rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -56,41 +79,48 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Dark mode - keep calm tones */
+    --background: 240 15% 5%;
+    --foreground: 240 10% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 240 15% 7%;
+    --card-foreground: 240 10% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 15% 7%;
+    --popover-foreground: 240 10% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 239 84% 72%;
+    --primary-soft: 240 30% 15%;
+    --primary-foreground: 240 15% 5%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 240 15% 12%;
+    --secondary-foreground: 240 10% 95%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 240 15% 12%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 240 15% 12%;
+    --accent-foreground: 239 84% 72%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --success: 142 76% 46%;
+    --success-soft: 142 30% 15%;
+    --warning: 38 92% 60%;
+    --warning-soft: 38 30% 15%;
+    --destructive: 0 72% 61%;
+    --destructive-foreground: 240 15% 5%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 240 15% 15%;
+    --input: 240 15% 15%;
+    --ring: 239 84% 72%;
+
+    --sidebar-background: 240 15% 8%;
+    --sidebar-foreground: 240 10% 90%;
+    --sidebar-primary: 239 84% 72%;
+    --sidebar-primary-foreground: 240 15% 5%;
+    --sidebar-accent: 240 15% 15%;
+    --sidebar-accent-foreground: 240 10% 90%;
+    --sidebar-border: 240 15% 15%;
+    --sidebar-ring: 239 84% 72%;
   }
 }
 
@@ -100,6 +130,42 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* Typography hierarchy */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Caveat', cursive;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .font-display {
+    font-family: 'Caveat', cursive;
+  }
+
+  /* Discreet mode utility */
+  .discreet-blur {
+    filter: blur(4px);
+    transition: filter 0.2s ease-in-out;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
   }
 }
