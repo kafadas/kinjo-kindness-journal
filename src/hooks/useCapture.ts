@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
+import { useOptimisticUpdates } from '@/hooks/useOptimisticUpdates'
 
 interface CaptureData {
   text: string
@@ -13,9 +14,11 @@ export const useCapture = () => {
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
   const { user, session, isAuthenticated } = useAuth()
+  const { addMomentOptimistically, rollbackMomentOptimistically } = useOptimisticUpdates()
 
   const capture = async ({ text, seedPerson, seedCategory }: CaptureData) => {
     setLoading(true)
+    let capturedData: any = null
 
     try {
       // Check authentication first
@@ -46,6 +49,12 @@ export const useCapture = () => {
       }
 
       console.log('Capture response received:', data)
+      capturedData = data
+
+      // Add optimistic update
+      if (data?.moment) {
+        addMomentOptimistically(data.moment)
+      }
 
       toast({
         title: 'Moment captured!',
@@ -55,6 +64,11 @@ export const useCapture = () => {
       return data
     } catch (err: any) {
       console.error('Error capturing moment:', err)
+      
+      // Rollback optimistic update if there was one
+      if (capturedData?.moment?.id) {
+        rollbackMomentOptimistically(capturedData.moment.id)
+      }
       
       let errorMessage = 'Failed to capture moment. Please try again.'
       

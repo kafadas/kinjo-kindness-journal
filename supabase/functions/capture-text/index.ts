@@ -71,8 +71,22 @@ serve(async (req) => {
       })
     }
 
-    // For now, create a simple moment record
-    // TODO: Implement AI parsing to extract person, action, category, etc.
+    // Get user settings for defaults
+    const { data: userSettings } = await supabaseClient
+      .from('settings')
+      .select('default_category_id')
+      .eq('user_id', user.id)
+      .single()
+
+    // Get "Other" category as fallback
+    const { data: otherCategory } = await supabaseClient
+      .from('categories')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('slug', 'other')
+      .single()
+
+    // Create moment with intelligent defaults
     const momentData = {
       user_id: user.id,
       description: text.trim(),
@@ -80,10 +94,11 @@ serve(async (req) => {
       action: 'given' as const, // Default action
       source: 'text' as const,
       significance: false,
-      tags: []
+      tags: [],
+      category_id: userSettings?.default_category_id || otherCategory?.id || null
     }
 
-    // If seedCategory is provided, try to find the category
+    // If seedCategory is provided, try to find the category (overrides defaults)
     if (seedCategory) {
       const { data: categories } = await supabaseClient
         .from('categories')

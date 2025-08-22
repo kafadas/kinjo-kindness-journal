@@ -50,19 +50,9 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="font-display text-xl">
-              Capture a Moment of Kindness
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="p-1"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <DialogTitle className="font-display text-xl">
+            Capture a Moment of Kindness
+          </DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
