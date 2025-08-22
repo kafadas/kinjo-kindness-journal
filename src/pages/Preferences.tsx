@@ -9,10 +9,12 @@ import { Separator } from '@/components/ui/separator';
 import { Settings, User, Bell, Palette, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
+import { useAuth } from '@/hooks/useAuth';
 
 export const Preferences: React.FC = () => {
   const navigate = useNavigate();
   const { isDiscreetMode, toggleDiscreetMode } = useDiscreetMode();
+  const { session } = useAuth();
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -35,24 +37,36 @@ export const Preferences: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input id="displayName" placeholder="How should we address you?" />
+                <Label htmlFor="email">Email</Label>
+                <Input 
+                  id="email" 
+                  value={session?.user?.email || ''} 
+                  disabled 
+                  className="bg-muted"
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Timezone</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select timezone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="utc">UTC</SelectItem>
-                    <SelectItem value="est">Eastern Time</SelectItem>
-                    <SelectItem value="pst">Pacific Time</SelectItem>
-                    <SelectItem value="cet">Central European Time</SelectItem>
-                  </SelectContent>
-                </Select>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input id="displayName" placeholder="How should we address you?" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="timezone">Timezone</Label>
+                  <Select>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select timezone" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="utc">UTC</SelectItem>
+                      <SelectItem value="est">Eastern Time</SelectItem>
+                      <SelectItem value="pst">Pacific Time</SelectItem>
+                      <SelectItem value="cet">Central European Time</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </CardContent>
