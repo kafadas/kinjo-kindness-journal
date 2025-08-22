@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DiscreetModeProvider } from "@/contexts/DiscreetModeContext";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Suspense, lazy } from "react";
 
 // Import all pages
 import { Landing } from "./pages/Landing";
@@ -25,6 +26,14 @@ import { Preferences } from "./pages/Preferences";
 import { Privacy } from "./pages/Privacy";
 import NotFound from "./pages/NotFound";
 
+// Development-only imports
+const isDev = import.meta.env.MODE !== 'production';
+
+// Lazy load dev component
+const DevRLSCheck = lazy(() => 
+  import("./pages/DevRLSCheck").then(module => ({ default: module.DevRLSCheck }))
+);
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -38,6 +47,20 @@ const App = () => (
             {/* Landing page for non-members */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
+            
+            {/* Development routes */}
+            {isDev && (
+              <Route 
+                path="/dev/rls-check" 
+                element={
+                  <AppLayout>
+                    <Suspense fallback={<div className="p-6">Loading dev tools...</div>}>
+                      <DevRLSCheck />
+                    </Suspense>
+                  </AppLayout>
+                } 
+              />
+            )}
             
             {/* Protected app routes */}
             <Route path="/home" element={<AppLayout><Home /></AppLayout>} />
