@@ -1,1 +1,13 @@
 project_id = "ajslpwfjkpuznufxnajl"
+
+[functions.capture-text]
+verify_jwt = true
+
+[functions.insights-home]
+verify_jwt = true
+
+[functions.export-data]
+verify_jwt = true
+
+[functions.nudges]
+verify_jwt = true
