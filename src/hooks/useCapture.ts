@@ -18,19 +18,38 @@ export const useCapture = () => {
     setLoading(true)
 
     try {
+      console.log('=== Capture Hook Called ===')
+      console.log('Input:', { text, seedPerson, seedCategory })
+      
       // Check authentication first
       if (!isAuthenticated || !user || !session) {
-        console.error('Capture attempt without authentication:', { isAuthenticated, user: !!user, session: !!session })
+        console.error('Authentication check failed:', { 
+          isAuthenticated, 
+          hasUser: !!user, 
+          hasSession: !!session 
+        })
         throw new Error('You must be logged in to capture moments')
       }
 
+      // Check session expiry
+      const now = Math.floor(Date.now() / 1000)
+      if (session.expires_at && session.expires_at < now) {
+        console.error('Session expired:', { 
+          expiresAt: session.expires_at, 
+          now 
+        })
+        throw new Error('Your session has expired. Please log in again.')
+      }
+
       const requestBody = { text, seedPerson, seedCategory }
-      console.log('Capture request - Auth status:', { 
+      console.log('=== Making API Call ===')
+      console.log('Auth status:', { 
         isAuthenticated, 
         userId: user.id, 
-        hasSession: !!session,
-        requestBody 
+        sessionExpiresAt: session.expires_at,
+        hasAccessToken: !!session.access_token
       })
+      console.log('Request body:', requestBody)
 
       const { data, error } = await supabase.functions.invoke('capture-text', {
         body: requestBody,
@@ -40,12 +59,14 @@ export const useCapture = () => {
         },
       })
 
+      console.log('=== API Response ===')
+      console.log('Response data:', data)
+      console.log('Response error:', error)
+
       if (error) {
         console.error('Supabase function invoke error:', error)
         throw error
       }
-
-      console.log('Capture response received:', data)
 
       toast({
         title: 'Moment captured!',
@@ -58,12 +79,17 @@ export const useCapture = () => {
       
       let errorMessage = 'Failed to capture moment. Please try again.'
       
-      if (err.message?.includes('logged in')) {
+      // Handle specific error codes from edge function
+      if (err.message?.includes('logged in') || err.message?.includes('session has expired')) {
         errorMessage = 'Please log in to capture moments.'
-      } else if (err.message?.includes('Unauthorized')) {
+      } else if (err.message?.includes('Unauthorized') || err.message?.includes('Authentication failed')) {
         errorMessage = 'Authentication failed. Please refresh and try again.'
-      } else if (err.message?.includes('Invalid request')) {
+      } else if (err.message?.includes('Invalid request') || err.message?.includes('EMPTY_BODY')) {
         errorMessage = 'Invalid request. Please check your input.'
+      } else if (err.message?.includes('Database insertion failed')) {
+        errorMessage = 'Database error. Please try again or contact support.'
+      } else if (err.message?.includes('JSON_PARSE_ERROR')) {
+        errorMessage = 'Request formatting error. Please try again.'
       }
       
       toast({
