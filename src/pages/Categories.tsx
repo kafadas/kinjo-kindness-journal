@@ -1,85 +1,118 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Heart, Users, Briefcase, Home, Coffee, Star, Plus, ArrowRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-
-const mockCategories = [
-  {
-    id: 1,
-    name: "Family",
-    icon: Home,
-    color: "text-red-500",
-    bgColor: "bg-red-50",
-    entriesCount: 25,
-    givenCount: 15,
-    receivedCount: 10,
-    lastEntry: "3 days ago",
-  },
-  {
-    id: 2,
-    name: "Work",
-    icon: Briefcase,
-    color: "text-blue-500",
-    bgColor: "bg-blue-50",
-    entriesCount: 18,
-    givenCount: 12,
-    receivedCount: 6,
-    lastEntry: "1 day ago",
-  },
-  {
-    id: 3,
-    name: "Community",
-    icon: Users,
-    color: "text-green-500",
-    bgColor: "bg-green-50",
-    entriesCount: 15,
-    givenCount: 10,
-    receivedCount: 5,
-    lastEntry: "2 hours ago",
-  },
-  {
-    id: 4,
-    name: "Friends",
-    icon: Coffee,
-    color: "text-purple-500",
-    bgColor: "bg-purple-50",
-    entriesCount: 22,
-    givenCount: 13,
-    receivedCount: 9,
-    lastEntry: "5 days ago",
-  },
-  {
-    id: 5,
-    name: "Self-care",
-    icon: Star,
-    color: "text-yellow-500",
-    bgColor: "bg-yellow-50",
-    entriesCount: 8,
-    givenCount: 8,
-    receivedCount: 0,
-    lastEntry: "1 week ago",
-  },
-];
+import React, { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { 
+  Heart, Search, Plus, ArrowRight, MoreVertical, 
+  Edit, Trash2, Tag, TrendingUp 
+} from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useNavigate } from 'react-router-dom'
+import { useCategories } from '@/hooks/useCategories'
+import { useDiscreetMode } from '@/contexts/DiscreetModeContext'
+import { maskName } from '@/lib/discreetMode'
+import { CreateCategoryModal } from '@/components/modals/CreateCategoryModal'
+import { DeleteConfirmDialog } from '@/components/modals/DeleteConfirmDialog'
+import { LoadingGrid, LoadingCard } from '@/components/ui/loading-card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { CaptureModal } from '@/components/modals/CaptureModal'
+import { format, subDays } from 'date-fns'
 
 export const Categories: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
+  const { categories, isLoading, deleteCategory, isDeleting } = useCategories()
+  const { isDiscreetMode } = useDiscreetMode()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedRange, setSelectedRange] = useState<'30' | '90'>('30')
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
+  const [captureModalOpen, setCaptureModalOpen] = useState(false)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
 
-  const handleCategoryClick = (categoryId: number) => {
-    navigate(`/categories/${categoryId}`);
-  };
+  const handleCategoryClick = (categoryId: string) => {
+    navigate(`/categories/${categoryId}`)
+  }
+
+  const handleDeleteCategory = (categoryId: string) => {
+    setCategoryToDelete(categoryId)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = () => {
+    if (categoryToDelete) {
+      deleteCategory(categoryToDelete, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false)
+          setCategoryToDelete(null)
+        }
+      })
+    }
+  }
+
+  const handleAddMoment = (categoryId: string) => {
+    setSelectedCategoryId(categoryId)
+    setCaptureModalOpen(true)
+  }
+
+  // Filter categories based on search
+  const filteredCategories = categories.filter(category =>
+    category.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  // Calculate range for stats
+  const rangeStart = subDays(new Date(), parseInt(selectedRange))
+  const totalEntries = categories.reduce((sum, cat) => sum + (cat.entry_count || 0), 0)
+
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+          <div className="h-10 w-32 bg-muted animate-pulse rounded" />
+        </div>
+        <LoadingGrid count={6} />
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-2xl font-semibold">
-          Categories
-        </h1>
-        <Button className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add Category
-        </Button>
+        <div>
+          <h1 className="font-display text-2xl font-semibold mb-2">
+            Categories
+          </h1>
+          <p className="text-muted-foreground">
+            Organize your kindness moments
+          </p>
+        </div>
+        <CreateCategoryModal />
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search categories..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Tabs value={selectedRange} onValueChange={(value) => setSelectedRange(value as '30' | '90')}>
+          <TabsList>
+            <TabsTrigger value="30">Last 30 days</TabsTrigger>
+            <TabsTrigger value="90">Last 90 days</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Overview Stats */}
@@ -87,7 +120,7 @@ export const Categories: React.FC = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-primary mb-1">
-              {mockCategories.length}
+              {categories.length}
             </div>
             <div className="text-sm text-muted-foreground">Active Categories</div>
           </CardContent>
@@ -95,7 +128,7 @@ export const Categories: React.FC = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-primary mb-1">
-              {mockCategories.reduce((sum, cat) => sum + cat.entriesCount, 0)}
+              {totalEntries}
             </div>
             <div className="text-sm text-muted-foreground">Total Entries</div>
           </CardContent>
@@ -103,7 +136,7 @@ export const Categories: React.FC = () => {
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-primary mb-1">
-              {Math.max(...mockCategories.map(cat => cat.entriesCount))}
+              {categories.length > 0 ? Math.max(...categories.map(cat => cat.entry_count || 0)) : 0}
             </div>
             <div className="text-sm text-muted-foreground">Most Active</div>
           </CardContent>
@@ -111,77 +144,141 @@ export const Categories: React.FC = () => {
       </div>
 
       {/* Categories Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockCategories.map((category) => {
-          const IconComponent = category.icon;
-          return (
-            <Card 
-              key={category.id}
-              className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:border-primary/30"
-              onClick={() => handleCategoryClick(category.id)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-lg ${category.bgColor} flex items-center justify-center`}>
-                    <IconComponent className={`h-6 w-6 ${category.color}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      {category.name}
-                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {category.entriesCount} entries
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        {category.givenCount} given
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        {category.receivedCount} received
-                      </Badge>
+      {filteredCategories.length > 0 ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredCategories.map((category) => {
+            const displayName = maskName(category.name, isDiscreetMode)
+            
+            return (
+              <Card 
+                key={category.id}
+                className="group hover:shadow-lg transition-all duration-200 hover:border-primary/30"
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Tag className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base cursor-pointer" onClick={() => handleCategoryClick(category.id)}>
+                          {displayName}
+                        </CardTitle>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleCategoryClick(category.id)}>
+                              <ArrowRight className="h-4 w-4 mr-2" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleAddMoment(category.id)}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Moment
+                            </DropdownMenuItem>
+                            {!category.is_default && (
+                              <>
+                                <DropdownMenuItem>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteCategory(category.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {totalEntries > 0 ? Math.round(((category.entry_count || 0) / totalEntries) * 100) : 0}% of entries
+                      </p>
                     </div>
                   </div>
-                  
-                  <div className="text-xs text-muted-foreground">
-                    Last entry: {category.lastEntry}
-                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    <div className="text-sm text-muted-foreground">
+                      Last {selectedRange} days activity
+                    </div>
+                    
+                    {/* Progress bar showing activity */}
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-primary h-2 rounded-full transition-all duration-300"
+                        style={{ 
+                          width: `${totalEntries > 0 ? Math.min(((category.entry_count || 0) / totalEntries) * 100, 100) : 0}%` 
+                        }}
+                      />
+                    </div>
 
-                  {/* Progress bar */}
-                  <div className="w-full bg-muted rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min((category.entriesCount / 30) * 100, 100)}%` }}
-                    ></div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">{category.entry_count || 0} entries</span>
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => handleAddMoment(category.id)}
+                        className="text-xs"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Add
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {mockCategories.length === 0 && (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold text-lg mb-2">No categories yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Create categories to organize your kindness entries.
-            </p>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Your First Category
-            </Button>
-          </CardContent>
-        </Card>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      ) : searchQuery ? (
+        <EmptyState
+          icon={Search}
+          title="No categories found"
+          description={`No categories match "${searchQuery}". Try a different search term.`}
+        />
+      ) : (
+        <EmptyState
+          icon={Tag}
+          title="No categories yet"
+          description="Create categories to organize your kindness moments and track your journey."
+          action={{
+            label: "Create Your First Category",
+            onClick: () => {}
+          }}
+        >
+          <CreateCategoryModal 
+            trigger={
+              <Button className="mt-4">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Category
+              </Button>
+            }
+          />
+        </EmptyState>
       )}
+
+      {/* Modals */}
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Category"
+        description="Are you sure you want to delete this category? This action cannot be undone."
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+      />
+
+      <CaptureModal
+        isOpen={captureModalOpen}
+        onClose={() => setCaptureModalOpen(false)}
+        seedCategory={selectedCategoryId || undefined}
+      />
     </div>
-  );
-};
+  )
+}

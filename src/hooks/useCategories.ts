@@ -9,7 +9,24 @@ export const useCategories = () => {
 
   const { data: categories = [], isLoading, error } = useQuery({
     queryKey: ['categories'],
-    queryFn: () => getCategories()
+    queryFn: async () => {
+      const cats = await getCategories()
+      // Get moment counts for each category
+      const categoriesWithCounts = await Promise.all(
+        cats.map(async (category) => {
+          const { data: moments, error } = await supabase
+            .from('moments')
+            .select('id')
+            .eq('category_id', category.id)
+          
+          return {
+            ...category,
+            entry_count: moments?.length || 0
+          }
+        })
+      )
+      return categoriesWithCounts
+    }
   })
 
   const createCategoryMutation = useMutation({
@@ -23,12 +40,32 @@ export const useCategories = () => {
     }
   })
 
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (categoryId: string) => {
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', categoryId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
+      toast.success('Category deleted successfully')
+    },
+    onError: (error) => {
+      toast.error('Failed to delete category: ' + error.message)
+    }
+  })
+
   return {
     categories,
     isLoading,
     error,
     createCategory: createCategoryMutation.mutate,
-    isCreating: createCategoryMutation.isPending
+    isCreating: createCategoryMutation.isPending,
+    deleteCategory: deleteCategoryMutation.mutate,
+    isDeleting: deleteCategoryMutation.isPending
   }
 }
 
