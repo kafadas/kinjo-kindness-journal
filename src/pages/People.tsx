@@ -1,59 +1,67 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Heart, Search, Plus, ArrowRight } from 'lucide-react';
+import { Heart, Search, Plus, ArrowRight, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
-
-const mockPeople = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    initials: "SJ",
-    relationship: "Neighbor",
-    entriesCount: 12,
-    lastInteraction: "2 hours ago",
-    categories: ["Community", "Friendship"],
-  },
-  {
-    id: 2,
-    name: "Alex Chen",
-    initials: "AC",
-    relationship: "Colleague",
-    entriesCount: 8,
-    lastInteraction: "1 day ago",
-    categories: ["Work", "Support"],
-  },
-  {
-    id: 3,
-    name: "Mom",
-    initials: "M",
-    relationship: "Family",
-    entriesCount: 25,
-    lastInteraction: "3 days ago",
-    categories: ["Family", "Care"],
-  },
-  {
-    id: 4,
-    name: "Jamie Rivera",
-    initials: "JR",
-    relationship: "Friend",
-    entriesCount: 15,
-    lastInteraction: "1 week ago",
-    categories: ["Friends", "Support"],
-  },
-];
+import { maskName, getDiscreetClasses } from '@/lib/discreetMode';
+import { usePeople } from '@/hooks/usePeople';
+import { AddPersonModal } from '@/components/modals/AddPersonModal';
+import { CaptureModal } from '@/components/modals/CaptureModal';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingGrid } from '@/components/ui/loading-card';
+import { formatDistanceToNow } from 'date-fns';
 
 export const People: React.FC = () => {
   const navigate = useNavigate();
   const { isDiscreetMode } = useDiscreetMode();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<any>(null);
+  
+  const { people, isLoading, searchPeople } = usePeople();
 
-  const handlePersonClick = (personId: number) => {
+  const filteredPeople = searchPeople(searchTerm).filter(person => !person.merged_into);
+
+  const handlePersonClick = (personId: string) => {
     navigate(`/people/${personId}`);
   };
+
+  const handleLogMoment = (e: React.MouseEvent, person: any) => {
+    e.stopPropagation();
+    setSelectedPerson(person);
+    setCaptureOpen(true);
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const renderAvatar = (person: any) => {
+    if (person.avatar_type === 'emoji' && person.avatar_value) {
+      return <div className="text-lg">{person.avatar_value}</div>;
+    }
+    return (
+      <AvatarFallback className="bg-primary/10 text-primary font-medium">
+        {getInitials(person.display_name)}
+      </AvatarFallback>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="font-display text-2xl font-semibold">People</h1>
+          <AddPersonModal />
+        </div>
+        <LoadingGrid count={6} />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -61,10 +69,7 @@ export const People: React.FC = () => {
         <h1 className="font-display text-2xl font-semibold">
           People
         </h1>
-        <Button className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Add Person
-        </Button>
+        <AddPersonModal />
       </div>
 
       {/* Search */}
@@ -75,76 +80,82 @@ export const People: React.FC = () => {
             <Input
               placeholder="Search people..."
               className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </CardContent>
       </Card>
 
       {/* People Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockPeople.map((person) => (
-          <Card 
-            key={person.id}
-            className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:border-primary/30"
-            onClick={() => handlePersonClick(person.id)}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                    {person.initials}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <CardTitle className={`text-base truncate ${isDiscreetMode ? 'discreet-blur' : ''}`}>
-                    {person.name}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {person.relationship}
-                  </p>
+      {filteredPeople.length > 0 ? (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredPeople.map((person) => (
+            <Card 
+              key={person.id}
+              className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:border-primary/30"
+              onClick={() => handlePersonClick(person.id)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    {renderAvatar(person)}
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className={`text-base truncate ${getDiscreetClasses(isDiscreetMode)}`}>
+                      {maskName(person.display_name, isDiscreetMode)}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {person.aliases && person.aliases.length > 0 
+                        ? `Also: ${person.aliases.slice(0, 2).join(', ')}`
+                        : 'No aliases'
+                      }
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Entries:</span>
-                  <span className="font-medium">{person.entriesCount}</span>
-                </div>
-                
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Last interaction:</span>
-                  <span className="text-xs">{person.lastInteraction}</span>
-                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Last recorded:</span>
+                    <span className="text-xs">
+                      {person.last_recorded_moment_at 
+                        ? formatDistanceToNow(new Date(person.last_recorded_moment_at), { addSuffix: true })
+                        : 'Never'
+                      }
+                    </span>
+                  </div>
 
-                <div className="flex flex-wrap gap-1">
-                  {person.categories.map((category) => (
-                    <Badge key={category} variant="outline" className="text-xs">
-                      {category}
-                    </Badge>
-                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full flex items-center gap-2"
+                    onClick={(e) => handleLogMoment(e, person)}
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                    Log Moment
+                  </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {mockPeople.length === 0 && (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Heart className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold text-lg mb-2">No people added yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Start tracking the wonderful people in your kindness journey.
-            </p>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Person
-            </Button>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          icon={Heart}
+          title="No people found"
+          description={searchTerm 
+            ? `No people match "${searchTerm}". Try a different search or add a new person.`
+            : "Start tracking the wonderful people in your kindness journey."
+          }
+          action={{
+            label: searchTerm ? "Clear search" : "Add Your First Person",
+            onClick: () => searchTerm ? setSearchTerm('') : null
+          }}
+        >
+          {!searchTerm && <AddPersonModal />}
+        </EmptyState>
       )}
     </div>
   );
