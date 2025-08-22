@@ -13,148 +13,47 @@ interface CaptureRequest {
 }
 
 serve(async (req) => {
-  console.log('=== Capture Text Function Called ===')
-  console.log('Method:', req.method)
-  console.log('URL:', req.url)
-  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling CORS preflight request')
     return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Debug all headers
-    console.log('=== Request Headers ===')
-    for (const [key, value] of req.headers.entries()) {
-      // Don't log full authorization value for security, just first/last chars
-      if (key.toLowerCase() === 'authorization') {
-        const maskedValue = value.length > 10 ? 
-          `${value.substring(0, 10)}...${value.substring(value.length - 10)}` : 
-          'present'
-        console.log(`${key}: ${maskedValue}`)
-      } else {
-        console.log(`${key}: ${value}`)
-      }
-    }
-
-    // Get authorization header
-    const authHeader = req.headers.get('Authorization')
-    const apikeyHeader = req.headers.get('apikey')
-    
-    console.log('Auth header present:', !!authHeader)
-    console.log('Apikey header present:', !!apikeyHeader)
-
-    if (!authHeader && !apikeyHeader) {
-      console.error('No authorization or apikey header found')
-      return new Response(JSON.stringify({ 
-        error: 'Missing authorization header',
-        code: 'MISSING_AUTH_HEADER'
-      }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // Create Supabase client with proper auth
+    // Get Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { 
-            Authorization: authHeader || `Bearer ${apikeyHeader}`,
-          },
+          headers: { Authorization: req.headers.get('Authorization')! },
         },
       }
     )
 
-    console.log('=== Authentication Check ===')
     // Get authenticated user
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
-    
-    console.log('Auth check completed')
-    console.log('User present:', !!user)
-    console.log('User ID:', user?.id || 'none')
-    console.log('Auth error:', authError?.message || 'none')
-
     if (authError || !user) {
-      console.error('Authentication failed:', authError)
-      return new Response(JSON.stringify({ 
-        error: 'Authentication failed',
-        details: authError?.message || 'No user found',
-        code: 'AUTH_FAILED'
-      }), {
+      console.error('Auth error:', authError)
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Parse request body with comprehensive debugging
-    console.log('=== Request Body Processing ===')
-    
-    // First check content-type and content-length
-    const contentType = req.headers.get('content-type')
-    const contentLength = req.headers.get('content-length')
-    console.log('Content-Type header:', contentType)
-    console.log('Content-Length header:', contentLength)
-    
+    // Parse request body with better error handling
     let requestBody: CaptureRequest
     try {
-      // Clone the request to avoid consuming the body
-      const clonedReq = req.clone()
-      const bodyText = await clonedReq.text()
-      console.log('Raw body length:', bodyText?.length || 0)
-      console.log('Raw body content (first 500 chars):', bodyText ? bodyText.substring(0, 500) : 'EMPTY')
-      console.log('Body type:', typeof bodyText)
-      
-      // If body is empty, try alternative reading methods
-      if (!bodyText || bodyText.trim() === '') {
-        console.log('Body appears empty, trying alternative methods...')
-        
-        try {
-          const arrayBuffer = await req.arrayBuffer()
-          console.log('ArrayBuffer length:', arrayBuffer.byteLength)
-          
-          if (arrayBuffer.byteLength > 0) {
-            const decoder = new TextDecoder()
-            const decodedBody = decoder.decode(arrayBuffer)
-            console.log('Decoded from ArrayBuffer:', decodedBody)
-            console.log('Decoded body length:', decodedBody.length)
-          }
-        } catch (abError) {
-          console.log('ArrayBuffer read failed:', abError.message)
-        }
-      }
+      const bodyText = await req.text()
+      console.log('Raw request body:', bodyText)
       
       if (!bodyText || bodyText.trim() === '') {
-        console.error('Request body is empty or null after all attempts')
-        return new Response(JSON.stringify({ 
-          error: 'Request body is required',
-          code: 'EMPTY_BODY',
-          debug: {
-            contentType,
-            contentLength,
-            method: req.method,
-            url: req.url
-          }
-        }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
+        throw new Error('Request body is empty')
       }
       
       requestBody = JSON.parse(bodyText)
-      console.log('Parsed request body successfully:', requestBody)
-      
     } catch (parseError) {
       console.error('JSON parsing error:', parseError)
-      console.error('Parse error details:', parseError.message)
-      return new Response(JSON.stringify({ 
-        error: 'Invalid JSON in request body',
-        details: parseError.message,
-        code: 'JSON_PARSE_ERROR'
-      }), {
+      return new Response(JSON.stringify({ error: 'Invalid request body' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -162,21 +61,11 @@ serve(async (req) => {
 
     const { text, seedPerson, seedCategory } = requestBody
 
-    console.log('=== Input Validation ===')
-    console.log('Extracted data:', { 
-      text: text || 'MISSING', 
-      seedPerson: seedPerson || 'none', 
-      seedCategory: seedCategory || 'none',
-      userId: user.id 
-    })
+    console.log('Capture request:', { text, seedPerson, seedCategory, userId: user.id })
 
     // Basic text validation
     if (!text || text.trim().length === 0) {
-      console.error('Text validation failed - empty or missing text')
-      return new Response(JSON.stringify({ 
-        error: 'Text is required and cannot be empty',
-        code: 'MISSING_TEXT'
-      }), {
+      return new Response(JSON.stringify({ error: 'Text is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -184,17 +73,7 @@ serve(async (req) => {
 
     // For now, create a simple moment record
     // TODO: Implement AI parsing to extract person, action, category, etc.
-    const momentData: {
-      user_id: string;
-      description: string;
-      happened_at: string;
-      action: 'given' | 'received';
-      source: string;
-      significance: boolean;
-      tags: string[];
-      category_id?: string;
-      person_id?: string;
-    } = {
+    const momentData = {
       user_id: user.id,
       description: text.trim(),
       happened_at: new Date().toISOString(),
@@ -255,9 +134,6 @@ serve(async (req) => {
     }
 
     // Create the moment
-    console.log('=== Database Insertion ===')
-    console.log('Final moment data:', JSON.stringify(momentData, null, 2))
-    
     const { data: moment, error: insertError } = await supabaseClient
       .from('moments')
       .insert(momentData)
@@ -265,19 +141,8 @@ serve(async (req) => {
       .single()
 
     if (insertError) {
-      console.error('=== Database Insert Error ===')
-      console.error('Error details:', insertError)
-      console.error('Error message:', insertError.message)
-      console.error('Error code:', insertError.code)
-      console.error('Error hint:', insertError.hint)
-      console.error('Failed moment data:', JSON.stringify(momentData, null, 2))
-      
-      return new Response(JSON.stringify({ 
-        error: 'Database insertion failed', 
-        details: insertError.message,
-        hint: insertError.hint,
-        code: insertError.code || 'DB_INSERT_ERROR'
-      }), {
+      console.error('Error creating moment:', insertError)
+      return new Response(JSON.stringify({ error: 'Failed to create moment' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
