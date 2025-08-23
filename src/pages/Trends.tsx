@@ -16,6 +16,7 @@ import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { RANGE_OPTIONS, type DateRangeLabel } from '@/lib/dateRange'
+import { formatPct1, formatNum, formatDelta } from '@/lib/formatters'
 
 const ACTION_OPTIONS = [
   { label: 'Both', value: 'both' },
@@ -331,12 +332,21 @@ export const Trends: React.FC = () => {
           Significant Only
         </Button>
 
-        {hasActiveFilters && (
+        {hasActiveFilters ? (
           <Button
             variant="ghost"
             size="sm"
             onClick={handleClearFilters}
             className="text-muted-foreground hover:text-foreground"
+          >
+            Clear filters
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled
+            className="text-muted-foreground/50 cursor-not-allowed"
           >
             Clear filters
           </Button>
@@ -360,7 +370,7 @@ export const Trends: React.FC = () => {
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
               <Users className="h-5 w-5 text-primary" />
             </div>
-            <div className="text-lg font-semibold mb-1">{givenPercentage}%</div>
+            <div className="text-lg font-semibold mb-1">{formatPct1(givenPercentage / 100)}</div>
             <div className="text-sm text-muted-foreground">Given vs Received</div>
           </CardContent>
         </Card>
@@ -416,8 +426,22 @@ export const Trends: React.FC = () => {
                 />
                 <YAxis />
                 <ChartTooltip 
-                  content={<ChartTooltipContent />}
-                  labelFormatter={(value) => format(parseISO(value as string), 'MMM d, yyyy')}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0]?.payload;
+                      if (data) {
+                        return (
+                          <div className="bg-background border rounded-lg shadow-lg p-3">
+                            <p className="font-medium">{format(parseISO(label as string), 'MMM d, yyyy')}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Total {data.total} (Given {data.given}, Received {data.received})
+                            </p>
+                          </div>
+                        );
+                      }
+                    }
+                    return null;
+                  }}
                 />
                 <Area
                   type="monotone"
@@ -439,7 +463,7 @@ export const Trends: React.FC = () => {
               </AreaChart>
             </ChartContainer>
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Click any point to view moments from that day
+              Charts respect the filters above (Action, Significant). Click any point to view moments from that day.
             </p>
           </CardContent>
         </Card>
@@ -448,6 +472,7 @@ export const Trends: React.FC = () => {
         <Card>
           <CardHeader>
             <CardTitle>Category Breakdown</CardTitle>
+            <p className="text-xs text-muted-foreground">Share of moments in selected range</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -461,18 +486,21 @@ export const Trends: React.FC = () => {
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                   />
-                  <div className="flex-1 text-sm font-medium">{category.name}</div>
-                  <Badge variant="outline" className="text-xs">
-                    {category.pct}%
-                  </Badge>
-                  {category.delta_pct !== 0 && (
-                    <Badge 
-                      variant={category.delta_pct > 0 ? 'default' : 'secondary'}
-                      className="text-xs"
-                    >
-                      {category.delta_pct > 0 ? '▲' : '▼'} {Math.abs(category.delta_pct)}%
-                    </Badge>
-                  )}
+                  <div className="flex-1">
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      {category.name} — {formatPct1(category.pct / 100)}
+                      {category.delta_pct !== 0 && (
+                        <span 
+                          className={cn(
+                            "text-xs",
+                            category.delta_pct > 0 ? "text-green-600" : "text-red-600"
+                          )}
+                        >
+                          ({formatDelta(category.delta_pct / 100)} vs prev window)
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -491,7 +519,7 @@ export const Trends: React.FC = () => {
                   <div key={gap.category_id} className="flex items-center gap-3">
                     <div className="flex-1 text-sm font-medium">{gap.name}</div>
                     <Badge variant="outline" className="text-xs">
-                      {gap.median_days} {gap.median_days === 1 ? 'day' : 'days'}
+                      {formatNum.format(gap.median_days)} {gap.median_days === 1 ? 'day' : 'days'}
                     </Badge>
                   </div>
                 ))}
