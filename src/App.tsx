@@ -30,9 +30,13 @@ import NotFound from "./pages/NotFound";
 const isDev = import.meta.env.MODE !== 'production';
 const hasDevParam = () => new URLSearchParams(window.location.search).has('dev');
 
-// Lazy load dev component
+// Lazy load dev components
 const DevRLSCheck = lazy(() => 
   import("./pages/DevRLSCheck").then(module => ({ default: module.DevRLSCheck }))
+);
+
+const DevSeedData = lazy(() =>
+  import("./pages/DevSeedData").then(module => ({ default: module.DevSeedData }))
 );
 
 const queryClient = new QueryClient();
@@ -51,16 +55,28 @@ const App = () => (
             
             {/* Development routes */}
             {(isDev || hasDevParam()) && (
-              <Route 
-                path="/dev/rls-check" 
-                element={
-                  <AppLayout>
-                    <Suspense fallback={<div className="p-6">Loading dev tools...</div>}>
-                      <DevRLSCheck />
-                    </Suspense>
-                  </AppLayout>
-                } 
-              />
+              <>
+                <Route 
+                  path="/dev/rls-check" 
+                  element={
+                    <AppLayout>
+                      <Suspense fallback={<div className="p-6">Loading dev tools...</div>}>
+                        <DevRLSCheck />
+                      </Suspense>
+                    </AppLayout>
+                  } 
+                />
+                <Route 
+                  path="/dev/seed-data" 
+                  element={
+                    <AppLayout>
+                      <Suspense fallback={<div className="p-6">Loading dev tools...</div>}>
+                        <DevSeedData />
+                      </Suspense>
+                    </AppLayout>
+                  } 
+                />
+              </>
             )}
             
             {/* Protected app routes */}
