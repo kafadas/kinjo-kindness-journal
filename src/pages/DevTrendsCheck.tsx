@@ -9,7 +9,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { RefreshCw, ExternalLink, Database, User, Calendar, BarChart3, AlertCircle, CheckCircle } from 'lucide-react'
-import { format, subDays } from 'date-fns'
+import { RANGE_OPTIONS, type DateRangeLabel, getRange } from '@/lib/dateRange'
+import { format } from 'date-fns'
 
 export const DevTrendsCheck: React.FC = () => {
   const { user } = useAuth()
@@ -47,16 +48,17 @@ export const DevTrendsCheck: React.FC = () => {
     queryFn: async () => {
       if (!user?.id) return null
       
-      const ranges = [30, 90, 120]
+      const ranges: DateRangeLabel[] = ['30d', '90d', '120d']
       const results = await Promise.all(
-        ranges.map(async (days) => {
+        ranges.map(async (rangeLabel) => {
+          const { start } = getRange(rangeLabel)
           const { count, error } = await supabase
             .from('moments')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .gte('happened_at', subDays(new Date(), days).toISOString())
+            .gte('happened_at', start.toISOString())
           
-          return { days, count, error }
+          return { range: rangeLabel, count, error }
         })
       )
       
@@ -71,10 +73,9 @@ export const DevTrendsCheck: React.FC = () => {
     queryFn: async () => {
       if (!user?.id) return null
       
-      const endDate = new Date()
-      const startDate = subDays(endDate, 90)
-      const startStr = format(startDate, 'yyyy-MM-dd')
-      const endStr = format(endDate, 'yyyy-MM-dd')
+      const { start, end } = getRange('90d')
+      const startStr = format(start, 'yyyy-MM-dd')
+      const endStr = format(end, 'yyyy-MM-dd')
 
       try {
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
@@ -208,9 +209,9 @@ export const DevTrendsCheck: React.FC = () => {
               </Alert>
             ) : (
               <div className="space-y-2">
-                {momentCounts?.map(({ days, count, error }) => (
-                  <div key={days} className="flex items-center gap-4">
-                    <Badge variant="outline">{days} days</Badge>
+                {momentCounts?.map(({ range, count, error }) => (
+                  <div key={range} className="flex items-center gap-4">
+                    <Badge variant="outline">{range}</Badge>
                     {error ? (
                       <span className="text-destructive text-sm">Error: {error.message}</span>
                     ) : (

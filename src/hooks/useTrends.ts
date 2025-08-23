@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from './useAuth'
-import { format, subDays } from 'date-fns'
+import { format } from 'date-fns'
+import { getRange, type DateRangeLabel } from '@/lib/dateRange'
 
 interface DailyData {
   date: string
@@ -30,7 +31,7 @@ interface TrendsData {
 }
 
 interface UseTrendsOptions {
-  range: number // days
+  range: DateRangeLabel
   action?: 'given' | 'received' | 'both'
   significance?: boolean
 }
@@ -43,12 +44,11 @@ export const useTrends = (options: UseTrendsOptions) => {
     queryFn: async (): Promise<TrendsData> => {
       if (!user?.id) throw new Error('User not authenticated')
 
-      // Calculate date range
-      const endDate = new Date()
-      const startDate = subDays(endDate, options.range)
+      // Calculate date range using timezone-aware utility
+      const { start, end } = getRange(options.range)
       
-      const startDateStr = format(startDate, 'yyyy-MM-dd')
-      const endDateStr = format(endDate, 'yyyy-MM-dd')
+      const startDateStr = format(start, 'yyyy-MM-dd')
+      const endDateStr = format(end, 'yyyy-MM-dd')
 
       try {
         // Call the three RPC functions in parallel

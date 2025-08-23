@@ -15,13 +15,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
-
-const RANGE_OPTIONS = [
-  { label: '30d', value: 30 },
-  { label: '90d', value: 90 },
-  { label: '180d', value: 180 },
-  { label: '365d', value: 365 }
-]
+import { RANGE_OPTIONS, type DateRangeLabel } from '@/lib/dateRange'
 
 const ACTION_OPTIONS = [
   { label: 'Both', value: 'both' },
@@ -61,7 +55,7 @@ export const Trends: React.FC = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
-  const [selectedRange, setSelectedRange] = useState(90)
+  const [selectedRange, setSelectedRange] = useState<DateRangeLabel>('90d')
   const [selectedAction, setSelectedAction] = useState<'given' | 'received' | 'both'>('both')
   const [significanceOnly, setSignificanceOnly] = useState(false)
 
@@ -87,12 +81,20 @@ export const Trends: React.FC = () => {
     return (
       <div className="p-6 max-w-6xl mx-auto">
         <div className="mb-6">
-          <h1 className="font-display text-2xl font-semibold mb-2">
-            Insights & Trends
-          </h1>
-          <p className="text-muted-foreground">
-            Discover gentle patterns in your kindness journey
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-semibold mb-2">
+                Insights & Trends
+              </h1>
+              <p className="text-muted-foreground">
+                Discover gentle patterns in your kindness journey
+              </p>
+            </div>
+            <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
+              <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
         </div>
         
         <Alert variant="destructive" className="mb-6">
@@ -128,19 +130,29 @@ export const Trends: React.FC = () => {
     return (
       <div className="p-6 max-w-6xl mx-auto">
         <div className="mb-6">
-          <h1 className="font-display text-2xl font-semibold mb-2">
-            Insights & Trends
-          </h1>
-          <p className="text-muted-foreground">
-            Discover gentle patterns in your kindness journey
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-semibold mb-2">
+                Insights & Trends
+              </h1>
+              <p className="text-muted-foreground">
+                Discover gentle patterns in your kindness journey
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
+                <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+                Refresh
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Loading Controls */}
         <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
           <div className="flex gap-2">
             {RANGE_OPTIONS.map(option => (
-              <Skeleton key={option.value} className="h-8 w-12" />
+              <Skeleton key={option.label} className="h-8 w-12" />
             ))}
           </div>
           <div className="flex gap-2">
@@ -190,12 +202,20 @@ export const Trends: React.FC = () => {
     return (
       <div className="p-6 max-w-6xl mx-auto">
         <div className="mb-6">
-          <h1 className="font-display text-2xl font-semibold mb-2">
-            Insights & Trends
-          </h1>
-          <p className="text-muted-foreground">
-            Discover gentle patterns in your kindness journey
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-semibold mb-2">
+                Insights & Trends
+              </h1>
+              <p className="text-muted-foreground">
+                Discover gentle patterns in your kindness journey
+              </p>
+            </div>
+            <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
+              <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
         </div>
         <EmptyState
           icon={Heart}
@@ -224,14 +244,22 @@ export const Trends: React.FC = () => {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="font-display text-2xl font-semibold mb-2">
-          Insights & Trends
-        </h1>
-        <p className="text-muted-foreground">
-          Discover gentle patterns in your kindness journey
-        </p>
-      </div>
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-semibold mb-2">
+                Insights & Trends
+              </h1>
+              <p className="text-muted-foreground">
+                Discover gentle patterns in your kindness journey
+              </p>
+            </div>
+            <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
+              <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
+        </div>
 
       {/* Controls */}
       <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
@@ -248,12 +276,12 @@ export const Trends: React.FC = () => {
         <div className="flex gap-2">
           {RANGE_OPTIONS.map(option => (
             <Button
-              key={option.value}
-              variant={selectedRange === option.value ? 'default' : 'outline'}
+              key={option.label}
+              variant={selectedRange === option.label ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedRange(option.value)}
+              onClick={() => setSelectedRange(option.label)}
             >
-              {option.label}
+              {option.display}
             </Button>
           ))}
         </div>
@@ -309,7 +337,10 @@ export const Trends: React.FC = () => {
               <TrendingUp className="h-5 w-5 text-primary" />
             </div>
             <div className="text-lg font-semibold mb-1">
-              {totalMoments > 0 ? (totalMoments / selectedRange).toFixed(1) : '0'}
+              {(() => {
+                const days = selectedRange === '1y' ? 365 : parseInt(selectedRange.replace('d', ''))
+                return totalMoments > 0 ? (totalMoments / days).toFixed(1) : '0'
+              })()}
             </div>
             <div className="text-sm text-muted-foreground">Daily Average</div>
           </CardContent>

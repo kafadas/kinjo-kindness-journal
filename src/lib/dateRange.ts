@@ -1,0 +1,42 @@
+import { startOfDay, endOfDay, subDays, subYears } from 'date-fns'
+
+export type DateRangeLabel = '30d' | '90d' | '120d' | '1y'
+
+export interface DateRange {
+  start: Date
+  end: Date
+}
+
+export const getRange = (label: DateRangeLabel, timezone: string = 'UTC'): DateRange => {
+  // Get current date in user's timezone
+  const now = new Date()
+  const end = endOfDay(now)
+  
+  let start: Date
+  
+  switch (label) {
+    case '30d':
+      start = startOfDay(subDays(now, 30))
+      break
+    case '90d':
+      start = startOfDay(subDays(now, 90))
+      break
+    case '120d':
+      start = startOfDay(subDays(now, 120))
+      break
+    case '1y':
+      start = startOfDay(subYears(now, 1))
+      break
+    default:
+      throw new Error(`Invalid date range label: ${label}`)
+  }
+  
+  return { start, end }
+}
+
+export const RANGE_OPTIONS = [
+  { label: '30d' as DateRangeLabel, display: '30 days' },
+  { label: '90d' as DateRangeLabel, display: '90 days' },
+  { label: '120d' as DateRangeLabel, display: '120 days' },
+  { label: '1y' as DateRangeLabel, display: '1 year' }
+]
