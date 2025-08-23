@@ -83,11 +83,22 @@ export const Trends: React.FC = () => {
   const hasActiveFilters = selectedAction !== 'both' || significanceOnly
 
   const handleCategoryClick = (categoryId: string) => {
-    navigate(`/categories/${categoryId}`)
+    const params = new URLSearchParams({
+      range: selectedRange,
+      action: selectedAction,
+      significant: significanceOnly.toString()
+    })
+    navigate(`/categories/${categoryId}?${params.toString()}`)
   }
 
   const handleTimelineClick = (date: string) => {
-    navigate(`/timeline?date=${date}`)
+    const params = new URLSearchParams({
+      start: date,
+      end: date,
+      action: selectedAction,
+      significant: significanceOnly.toString()
+    })
+    navigate(`/timeline?${params.toString()}`)
   }
   if (isError) {
     return (

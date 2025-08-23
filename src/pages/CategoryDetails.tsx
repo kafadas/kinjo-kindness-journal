@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Heart, Calendar, Filter, TrendingUp, Users, Plus, Search, MoreHorizontal, Edit, Tag } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
 import { DiscreetText } from '@/components/ui/DiscreetText';
 import { useCategoryDetails } from '@/hooks/useCategories';
@@ -19,9 +19,25 @@ import { formatDistanceToNow, startOfMonth, endOfMonth, subDays, format, isToday
 export const CategoryDetails: React.FC = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const { isDiscreetMode } = useDiscreetMode()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'given' | 'received'>('all')
+  
+  // Initialize filters from URL parameters
+  const getInitialState = () => {
+    const range = searchParams.get('range')
+    const action = searchParams.get('action')
+    const significant = searchParams.get('significant')
+    
+    return {
+      searchQuery: '',
+      selectedFilter: (action && action !== 'both' ? action : 'all') as 'all' | 'given' | 'received',
+      // Note: range and significant filters would need to be implemented in the category details hook
+    }
+  }
+  
+  const initialState = getInitialState()
+  const [searchQuery, setSearchQuery] = useState(initialState.searchQuery)
+  const [selectedFilter, setSelectedFilter] = useState(initialState.selectedFilter)
   const [captureModalOpen, setCaptureModalOpen] = useState(false)
 
   const { category, moments, stats, isLoading } = useCategoryDetails(id!)

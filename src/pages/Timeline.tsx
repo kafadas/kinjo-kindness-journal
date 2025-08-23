@@ -29,12 +29,35 @@ import { LoadingCard, LoadingGrid } from '@/components/ui/loading-card';
 import { formatDistanceToNow, format } from 'date-fns';
 import { toast } from 'sonner';
 import type { MomentWithRelations } from '@/lib/db/types';
+import { useSearchParams } from 'react-router-dom';
 
 export const Timeline: React.FC = () => {
   const { isDiscreetMode } = useDiscreetMode();
   const searchRef = useRef<HTMLInputElement>(null);
+  const [searchParams] = useSearchParams();
   
-  const [filters, setFilters] = useState<TimelineFilters>({});
+  // Initialize filters from URL parameters
+  const getInitialFilters = (): TimelineFilters => {
+    const filters: TimelineFilters = {};
+    
+    const start = searchParams.get('start');
+    const end = searchParams.get('end');
+    const action = searchParams.get('action');
+    const significant = searchParams.get('significant');
+    
+    if (start && end) {
+      filters.dateRange = {
+        from: new Date(start),
+        to: new Date(end)
+      };
+    }
+    if (action && action !== 'both') filters.action = action as 'given' | 'received';
+    if (significant === 'true') filters.significance = true;
+    
+    return filters;
+  };
+  
+  const [filters, setFilters] = useState<TimelineFilters>(getInitialFilters);
   const [selectedMoments, setSelectedMoments] = useState<Set<string>>(new Set());
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
