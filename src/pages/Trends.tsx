@@ -277,7 +277,7 @@ export const Trends: React.FC = () => {
   const givenPercentage = balanceTotalMoments > 0 ? (balanceGivenMoments / balanceTotalMoments) : 0
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto w-full">
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -296,15 +296,16 @@ export const Trends: React.FC = () => {
         </div>
 
       {/* Controls - Row 1 */}
-      <div className="flex flex-wrap gap-2 mb-6 p-3 sm:p-4 bg-muted/30 rounded-lg">
+      <div className="flex flex-wrap gap-2 mb-6 p-3 sm:p-4 bg-muted/30 rounded-lg overflow-hidden">
         {/* Range Pills */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-1 sm:gap-2 flex-wrap min-w-0">
           {RANGE_OPTIONS.map(option => (
             <Button
               key={option.label}
               variant={selectedRange === option.label ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedRange(option.label)}
+              className="text-xs sm:text-sm px-2 sm:px-3"
             >
               {option.display}
             </Button>
@@ -312,13 +313,14 @@ export const Trends: React.FC = () => {
         </div>
         
         {/* Action Filter Chips */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-1 sm:gap-2 flex-wrap min-w-0">
           {ACTION_OPTIONS.map(option => (
             <Button
               key={option.value}
               variant={selectedAction === option.value ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedAction(option.value as any)}
+              className="text-xs sm:text-sm px-2 sm:px-3"
             >
               {option.label}
             </Button>
@@ -330,9 +332,11 @@ export const Trends: React.FC = () => {
           variant={significanceOnly ? 'default' : 'outline'}
           size="sm"
           onClick={() => setSignificanceOnly(!significanceOnly)}
+          className="text-xs sm:text-sm px-2 sm:px-3 min-w-0"
         >
-          <Filter className="h-4 w-4 mr-2" />
-          Significant Only
+          <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+          <span className="hidden sm:inline">Significant Only</span>
+          <span className="sm:hidden">Significant</span>
         </Button>
 
         {/* Clear Filters */}
@@ -342,6 +346,7 @@ export const Trends: React.FC = () => {
           onClick={handleClearFilters}
           disabled={!hasActiveFilters}
           className={cn(
+            "text-xs sm:text-sm px-2 sm:px-3",
             hasActiveFilters 
               ? "text-muted-foreground hover:text-foreground" 
               : "text-muted-foreground/50 cursor-not-allowed"
@@ -356,9 +361,9 @@ export const Trends: React.FC = () => {
           size="sm"
           onClick={handleRefresh}
           disabled={isLoading}
-          className="sm:ml-auto"
+          className="sm:ml-auto text-xs sm:text-sm px-2 sm:px-3"
         >
-          <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+          <RefreshCw className={cn("h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2", isLoading && "animate-spin")} />
           Refresh
         </Button>
       </div>

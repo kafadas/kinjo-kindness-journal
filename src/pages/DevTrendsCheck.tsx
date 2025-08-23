@@ -8,9 +8,17 @@ import { useAuth } from '@/hooks/useAuth'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { RefreshCw, ExternalLink, Database, User, Calendar, BarChart3, AlertCircle, CheckCircle } from 'lucide-react'
+import { RefreshCw, ExternalLink, Database, User, Calendar, BarChart3, AlertCircle, CheckCircle, Filter } from 'lucide-react'
 import { RANGE_OPTIONS, type DateRangeLabel, getRange } from '@/lib/dateRange'
 import { format } from 'date-fns'
+import { cn } from '@/lib/utils'
+import { formatPct1, formatNum, formatDelta } from '@/lib/formatters'
+
+const ACTION_OPTIONS = [
+  { label: 'Both', value: 'both' },
+  { label: 'Given', value: 'given' },
+  { label: 'Received', value: 'received' }
+]
 
 export const DevTrendsCheck: React.FC = () => {
   const { user } = useAuth()
@@ -18,6 +26,9 @@ export const DevTrendsCheck: React.FC = () => {
   const location = useLocation()
   const queryClient = useQueryClient()
   const [refreshing, setRefreshing] = useState(false)
+  const [selectedRange, setSelectedRange] = useState<DateRangeLabel>('90d')
+  const [selectedAction, setSelectedAction] = useState<'given' | 'received' | 'both'>('both')
+  const [significanceOnly, setSignificanceOnly] = useState(false)
 
   // Check if we should show this dev page
   const isDev = location.pathname === '/dev/trends-check' || 
@@ -42,21 +53,43 @@ export const DevTrendsCheck: React.FC = () => {
     enabled: !!user?.id
   })
 
-  // Moment counts for different ranges
+  // Moment counts for different ranges with current filters
   const { data: momentCounts, isLoading: countsLoading, error: countsError } = useQuery({
-    queryKey: ['dev-moment-counts', user?.id],
+    queryKey: ['dev-moment-counts', user?.id, selectedRange, selectedAction, significanceOnly],
     queryFn: async () => {
       if (!user?.id) return null
       
-      const ranges: DateRangeLabel[] = ['30d', '90d', '120d']
+      const ranges: DateRangeLabel[] = ['30d', '90d', '120d', '1y']
       const results = await Promise.all(
         ranges.map(async (rangeLabel) => {
-          const { start } = getRange(rangeLabel)
+          const { start, end } = getRange(rangeLabel)
           const { count, error } = await supabase
             .from('moments')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .gte('happened_at', start.toISOString())
+            .lte('happened_at', end.toISOString())
+            .then(({ count, error: baseError }) => {
+              // Apply filters
+              if (baseError) return { count: null, error: baseError }
+              
+              let query = supabase
+                .from('moments')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .gte('happened_at', start.toISOString())
+                .lte('happened_at', end.toISOString())
+              
+              if (selectedAction !== 'both') {
+                query = query.eq('action', selectedAction)
+              }
+              
+              if (significanceOnly) {
+                query = query.eq('significance', true)
+              }
+              
+              return query
+            })
           
           return { range: rangeLabel, count, error }
         })
@@ -67,13 +100,13 @@ export const DevTrendsCheck: React.FC = () => {
     enabled: !!user?.id
   })
 
-  // Test RPC functions
+  // Test RPC functions with current filters
   const { data: rpcResults, isLoading: rpcLoading, error: rpcError } = useQuery({
-    queryKey: ['dev-rpc-test', user?.id],
+    queryKey: ['dev-rpc-test', user?.id, selectedRange, selectedAction, significanceOnly],
     queryFn: async () => {
       if (!user?.id) return null
       
-      const { start, end } = getRange('90d')
+      const { start, end } = getRange(selectedRange)
       const startStr = format(start, 'yyyy-MM-dd')
       const endStr = format(end, 'yyyy-MM-dd')
 
@@ -83,29 +116,45 @@ export const DevTrendsCheck: React.FC = () => {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
-            p_action: 'both',
-            p_significant_only: false
+            p_action: selectedAction,
+            p_significant_only: significanceOnly
           }),
           supabase.rpc('category_share_delta', {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
-            p_action: 'both',
-            p_significant_only: false
+            p_action: selectedAction,
+            p_significant_only: significanceOnly
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
-            p_action: 'both',
-            p_significant_only: false
+            p_action: selectedAction,
+            p_significant_only: significanceOnly
           })
         ])
 
         return {
-          daily: { data: dailyResult.data?.slice(0, 5), error: dailyResult.error },
-          category: { data: categoryResult.data?.slice(0, 5), error: categoryResult.error },
-          median: { data: medianResult.data?.slice(0, 5), error: medianResult.error }
+          daily: { 
+            data: dailyResult.data?.slice(0, 5), 
+            error: dailyResult.error 
+          },
+          category: { 
+            data: categoryResult.data?.slice(0, 5)?.map(row => ({
+              ...row,
+              pct: row.pct ? parseFloat(row.pct.toString()) : row.pct,
+              delta_pct: row.delta_pct ? parseFloat(row.delta_pct.toString()) : row.delta_pct
+            })), 
+            error: categoryResult.error 
+          },
+          median: { 
+            data: medianResult.data?.slice(0, 5)?.map(row => ({
+              ...row,
+              median_days: row.median_days ? parseFloat(row.median_days.toString()) : row.median_days
+            })), 
+            error: medianResult.error 
+          }
         }
       } catch (error) {
         throw error
@@ -122,6 +171,17 @@ export const DevTrendsCheck: React.FC = () => {
     setRefreshing(false)
   }
 
+  const handleOpenTrends = () => {
+    const params = new URLSearchParams({
+      range: selectedRange,
+      action: selectedAction,
+      significant: significanceOnly.toString()
+    })
+    navigate(`/trends?${params.toString()}`)
+  }
+
+  const hasActiveFilters = selectedAction !== 'both' || significanceOnly
+
   if (!user) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
@@ -136,7 +196,7 @@ export const DevTrendsCheck: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto w-full">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-semibold mb-2 flex items-center gap-2">
           <Database className="h-6 w-6 text-primary" />
@@ -145,6 +205,51 @@ export const DevTrendsCheck: React.FC = () => {
         <p className="text-muted-foreground">
           Testing RPC functions and data integrity for trends analytics
         </p>
+      </div>
+
+      {/* Controls - Match Trends page */}
+      <div className="flex flex-wrap gap-2 mb-6 p-3 sm:p-4 bg-muted/30 rounded-lg overflow-hidden">
+        {/* Range Pills */}
+        <div className="flex gap-1 sm:gap-2 flex-wrap min-w-0">
+          {RANGE_OPTIONS.map(option => (
+            <Button
+              key={option.label}
+              variant={selectedRange === option.label ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedRange(option.label)}
+              className="text-xs sm:text-sm px-2 sm:px-3"
+            >
+              {option.display}
+            </Button>
+          ))}
+        </div>
+        
+        {/* Action Filter Chips */}
+        <div className="flex gap-1 sm:gap-2 flex-wrap min-w-0">
+          {ACTION_OPTIONS.map(option => (
+            <Button
+              key={option.value}
+              variant={selectedAction === option.value ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedAction(option.value as any)}
+              className="text-xs sm:text-sm px-2 sm:px-3"
+            >
+              {option.label}
+            </Button>
+          ))}
+        </div>
+
+        {/* Significance Filter */}
+        <Button
+          variant={significanceOnly ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setSignificanceOnly(!significanceOnly)}
+          className="text-xs sm:text-sm px-2 sm:px-3 min-w-0"
+        >
+          <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+          <span className="hidden sm:inline">Significant Only</span>
+          <span className="sm:hidden">Significant</span>
+        </Button>
       </div>
 
       {/* Action Buttons */}
@@ -157,9 +262,9 @@ export const DevTrendsCheck: React.FC = () => {
           <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
           Invalidate Trends Cache
         </Button>
-        <Button onClick={() => navigate('/trends')}>
+        <Button onClick={handleOpenTrends}>
           <BarChart3 className="h-4 w-4 mr-2" />
-          Open Trends
+          Open Trends {hasActiveFilters && '(with filters)'}
         </Button>
       </div>
 
@@ -233,7 +338,10 @@ export const DevTrendsCheck: React.FC = () => {
         {/* RPC Function Results */}
         <Card>
           <CardHeader>
-            <CardTitle>RPC Function Test Results (90 days, first 5 rows)</CardTitle>
+            <CardTitle>RPC Function Test Results ({selectedRange}, first 5 rows)</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Current filters: {selectedAction} action, {significanceOnly ? 'significant only' : 'all moments'}
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
             {rpcLoading ? (
@@ -250,6 +358,14 @@ export const DevTrendsCheck: React.FC = () => {
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   Error loading RPC results: {rpcError.message}
+                  {process.env.NODE_ENV === 'development' && (
+                    <details className="mt-2 text-xs opacity-70">
+                      <summary className="cursor-pointer">Debug info</summary>
+                      <pre className="mt-1 whitespace-pre-wrap break-all">
+                        {rpcError.toString()}
+                      </pre>
+                    </details>
+                  )}
                 </AlertDescription>
               </Alert>
             ) : (
@@ -259,7 +375,9 @@ export const DevTrendsCheck: React.FC = () => {
                   <div className="flex items-center gap-2 mb-2">
                     <Badge>daily_moment_counts</Badge>
                     {rpcResults?.daily.error ? (
-                      <Badge variant="destructive">Error</Badge>
+                      <Badge variant="destructive">
+                        Error: {rpcResults.daily.error.code || 'Unknown'} 
+                      </Badge>
                     ) : (
                       <Badge variant="secondary">
                         <CheckCircle className="h-3 w-3 mr-1" />
@@ -270,7 +388,8 @@ export const DevTrendsCheck: React.FC = () => {
                   {rpcResults?.daily.error ? (
                     <Alert variant="destructive">
                       <AlertDescription>
-                        {rpcResults.daily.error.message}
+                        Code: {rpcResults.daily.error.code || 'N/A'}<br/>
+                        Message: {rpcResults.daily.error.message}
                       </AlertDescription>
                     </Alert>
                   ) : (
@@ -287,7 +406,9 @@ export const DevTrendsCheck: React.FC = () => {
                   <div className="flex items-center gap-2 mb-2">
                     <Badge>category_share_delta</Badge>
                     {rpcResults?.category.error ? (
-                      <Badge variant="destructive">Error</Badge>
+                      <Badge variant="destructive">
+                        Error: {rpcResults.category.error.code || 'Unknown'}
+                      </Badge>
                     ) : (
                       <Badge variant="secondary">
                         <CheckCircle className="h-3 w-3 mr-1" />
@@ -298,13 +419,22 @@ export const DevTrendsCheck: React.FC = () => {
                   {rpcResults?.category.error ? (
                     <Alert variant="destructive">
                       <AlertDescription>
-                        {rpcResults.category.error.message}
+                        Code: {rpcResults.category.error.code || 'N/A'}<br/>
+                        Message: {rpcResults.category.error.message}
                       </AlertDescription>
                     </Alert>
                   ) : (
                     <div className="bg-muted/30 p-3 rounded text-xs">
                       <pre className="whitespace-pre-wrap">
-                        {JSON.stringify(rpcResults?.category.data, null, 2)}
+                        {JSON.stringify(
+                          rpcResults?.category.data?.map(row => ({
+                            ...row,
+                            pct_formatted: row.pct ? formatPct1(row.pct) : 'N/A',
+                            delta_formatted: row.delta_pct ? formatDelta(row.delta_pct) : 'N/A'
+                          })), 
+                          null, 
+                          2
+                        )}
                       </pre>
                     </div>
                   )}
@@ -315,7 +445,9 @@ export const DevTrendsCheck: React.FC = () => {
                   <div className="flex items-center gap-2 mb-2">
                     <Badge>median_gap_by_category</Badge>
                     {rpcResults?.median.error ? (
-                      <Badge variant="destructive">Error</Badge>
+                      <Badge variant="destructive">
+                        Error: {rpcResults.median.error.code || 'Unknown'}
+                      </Badge>
                     ) : (
                       <Badge variant="secondary">
                         <CheckCircle className="h-3 w-3 mr-1" />
@@ -326,13 +458,21 @@ export const DevTrendsCheck: React.FC = () => {
                   {rpcResults?.median.error ? (
                     <Alert variant="destructive">
                       <AlertDescription>
-                        {rpcResults.median.error.message}
+                        Code: {rpcResults.median.error.code || 'N/A'}<br/>
+                        Message: {rpcResults.median.error.message}
                       </AlertDescription>
                     </Alert>
                   ) : (
                     <div className="bg-muted/30 p-3 rounded text-xs">
                       <pre className="whitespace-pre-wrap">
-                        {JSON.stringify(rpcResults?.median.data, null, 2)}
+                        {JSON.stringify(
+                          rpcResults?.median.data?.map(row => ({
+                            ...row,
+                            median_days_formatted: row.median_days ? `${formatNum.format(row.median_days)} days` : 'N/A'
+                          })), 
+                          null, 
+                          2
+                        )}
                       </pre>
                     </div>
                   )}
