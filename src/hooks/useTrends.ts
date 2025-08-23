@@ -32,15 +32,15 @@ interface TrendsData {
 
 interface UseTrendsOptions {
   range: DateRangeLabel
-  action?: 'given' | 'received' | 'both'
-  significance?: boolean
+  action: 'given' | 'received' | 'both'
+  significance: boolean
 }
 
 export const useTrends = (options: UseTrendsOptions) => {
   const { user } = useAuth()
 
   return useQuery({
-    queryKey: ['trends', user?.id, options],
+    queryKey: ['trends', user?.id, options.range, options.action, options.significance],
     queryFn: async (): Promise<TrendsData> => {
       if (!user?.id) throw new Error('User not authenticated')
 
@@ -56,17 +56,23 @@ export const useTrends = (options: UseTrendsOptions) => {
           supabase.rpc('daily_moment_counts', {
             p_user: user.id,
             p_start: startDateStr,
-            p_end: endDateStr
+            p_end: endDateStr,
+            p_action: options.action,
+            p_significant_only: options.significance
           }),
           supabase.rpc('category_share_delta', {
             p_user: user.id,
             p_start: startDateStr,
-            p_end: endDateStr
+            p_end: endDateStr,
+            p_action: options.action,
+            p_significant_only: options.significance
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,
             p_start: startDateStr,
-            p_end: endDateStr
+            p_end: endDateStr,
+            p_action: options.action,
+            p_significant_only: options.significance
           })
         ])
 

@@ -82,17 +82,23 @@ export const DevTrendsCheck: React.FC = () => {
           supabase.rpc('daily_moment_counts', {
             p_user: user.id,
             p_start: startStr,
-            p_end: endStr
+            p_end: endStr,
+            p_action: 'both',
+            p_significant_only: false
           }),
           supabase.rpc('category_share_delta', {
             p_user: user.id,
             p_start: startStr,
-            p_end: endStr
+            p_end: endStr,
+            p_action: 'both',
+            p_significant_only: false
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,
             p_start: startStr,
-            p_end: endStr
+            p_end: endStr,
+            p_action: 'both',
+            p_significant_only: false
           })
         ])
 

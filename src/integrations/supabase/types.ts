@@ -436,7 +436,15 @@ export type Database = {
         Returns: string
       }
       category_share_delta: {
-        Args: { p_end: string; p_start: string; p_user: string }
+        Args:
+          | {
+              p_action?: string
+              p_end: string
+              p_significant_only?: boolean
+              p_start: string
+              p_user: string
+            }
+          | { p_end: string; p_start: string; p_user: string }
         Returns: {
           category_id: string
           delta_pct: number
@@ -463,7 +471,15 @@ export type Database = {
         Returns: string
       }
       daily_moment_counts: {
-        Args: { p_end: string; p_start: string; p_user: string }
+        Args:
+          | {
+              p_action?: string
+              p_end: string
+              p_significant_only?: boolean
+              p_start: string
+              p_user: string
+            }
+          | { p_end: string; p_start: string; p_user: string }
         Returns: {
           d: string
           given: number
@@ -481,7 +497,15 @@ export type Database = {
         }[]
       }
       median_gap_by_category: {
-        Args: { p_end: string; p_start: string; p_user: string }
+        Args:
+          | {
+              p_action?: string
+              p_end: string
+              p_significant_only?: boolean
+              p_start: string
+              p_user: string
+            }
+          | { p_end: string; p_start: string; p_user: string }
         Returns: {
           category_id: string
           median_days: number
