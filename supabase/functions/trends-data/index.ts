@@ -45,112 +45,105 @@ export default async (req: Request): Promise<Response> => {
     const baselineFromDate = new Date(fromDate)
     baselineFromDate.setDate(baselineFromDate.getDate() - range)
 
-    // Build base query conditions
-    let actionFilter = ''
+    console.log(`Processing trends for user ${user.id}, range: ${range}d, action: ${action}, significance: ${significance}`)
+
+    // Build query builders with filters
+    let baseQuery = supabase
+      .from('moments')
+      .eq('user_id', user.id)
+    
     if (action && action !== 'both') {
-      actionFilter = `AND m.action = '${action}'`
+      baseQuery = baseQuery.eq('action', action)
     }
     
-    let significanceFilter = ''
     if (significance) {
-      significanceFilter = 'AND m.significance = true'
+      baseQuery = baseQuery.eq('significance', true)
     }
 
-    // 1. Daily series data
-    const { data: seriesData, error: seriesError } = await supabase
-      .from('moments')
-      .select('happened_at, action, significance')
-      .eq('user_id', user.id)
+    // 1. Daily series data - optimized with proper SQL filtering
+    const { data: seriesRawData, error: seriesError } = await baseQuery
+      .select('happened_at, action')
       .gte('happened_at', fromDate.toISOString())
-      .then(({ data, error }) => {
-        if (error) return { data: null, error }
-        
-        const dateMap = new Map<string, { total: number, given: number, received: number }>()
-        
-        // Initialize all dates in range
-        for (let d = new Date(fromDate); d <= new Date(); d.setDate(d.getDate() + 1)) {
-          const dateStr = d.toISOString().split('T')[0]
-          dateMap.set(dateStr, { total: 0, given: 0, received: 0 })
-        }
-        
-        // Fill with actual data
-        data?.forEach(moment => {
-          if (significance && !moment.significance) return
-          if (action && action !== 'both' && moment.action !== action) return
-          
-          const dateStr = new Date(moment.happened_at).toISOString().split('T')[0]
-          const existing = dateMap.get(dateStr) || { total: 0, given: 0, received: 0 }
-          
-          existing.total++
-          if (moment.action === 'given') existing.given++
-          if (moment.action === 'received') existing.received++
-          
-          dateMap.set(dateStr, existing)
-        })
-        
-        const result = Array.from(dateMap.entries()).map(([date, counts]) => ({
-          date,
-          ...counts
-        })).sort((a, b) => a.date.localeCompare(b.date))
-        
-        return { data: result, error: null }
-      })
 
     if (seriesError) {
       console.error('Series data error:', seriesError)
       throw seriesError
     }
 
-    // 2. Category share data with baseline comparison
-    const [currentPeriod, baselinePeriod] = await Promise.all([
-      supabase
-        .from('moments')
-        .select('category_id, action, significance, categories!inner(id, name)')
-        .eq('user_id', user.id)
-        .gte('happened_at', fromDate.toISOString())
-        .then(({ data, error }) => {
-          if (error) return { data: null, error }
-          
-          let filtered = data || []
-          if (action && action !== 'both') {
-            filtered = filtered.filter(m => m.action === action)
-          }
-          if (significance) {
-            filtered = filtered.filter(m => m.significance)
-          }
-          
-          return { data: filtered, error: null }
-        }),
-      supabase
-        .from('moments')
-        .select('category_id, action, significance')
-        .eq('user_id', user.id)
-        .gte('happened_at', baselineFromDate.toISOString())
-        .lt('happened_at', fromDate.toISOString())
-        .then(({ data, error }) => {
-          if (error) return { data: null, error }
-          
-          let filtered = data || []
-          if (action && action !== 'both') {
-            filtered = filtered.filter(m => m.action === action)
-          }
-          if (significance) {
-            filtered = filtered.filter(m => m.significance)
-          }
-          
-          return { data: filtered, error: null }
-        })
+    // Process series data efficiently
+    const dateMap = new Map<string, { total: number, given: number, received: number }>()
+    
+    // Initialize all dates in range
+    for (let d = new Date(fromDate); d <= new Date(); d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().split('T')[0]
+      dateMap.set(dateStr, { total: 0, given: 0, received: 0 })
+    }
+    
+    // Fill with actual data
+    seriesRawData?.forEach(moment => {
+      const dateStr = new Date(moment.happened_at).toISOString().split('T')[0]
+      const existing = dateMap.get(dateStr) || { total: 0, given: 0, received: 0 }
+      
+      existing.total++
+      if (moment.action === 'given') existing.given++
+      if (moment.action === 'received') existing.received++
+      
+      dateMap.set(dateStr, existing)
+    })
+    
+    const seriesDaily = Array.from(dateMap.entries()).map(([date, counts]) => ({
+      date,
+      ...counts
+    })).sort((a, b) => a.date.localeCompare(b.date))
+
+    // 2. Category share data with baseline comparison - parallel queries
+    const [currentPeriodData, baselinePeriodData] = await Promise.all([
+      // Current period
+      (() => {
+        let query = supabase
+          .from('moments')
+          .select('category_id, categories!inner(name)')
+          .eq('user_id', user.id)
+          .gte('happened_at', fromDate.toISOString())
+        
+        if (action && action !== 'both') {
+          query = query.eq('action', action)
+        }
+        if (significance) {
+          query = query.eq('significance', true)
+        }
+        
+        return query
+      })(),
+      
+      // Baseline period
+      (() => {
+        let query = supabase
+          .from('moments')
+          .select('category_id')
+          .eq('user_id', user.id)
+          .gte('happened_at', baselineFromDate.toISOString())
+          .lt('happened_at', fromDate.toISOString())
+        
+        if (action && action !== 'both') {
+          query = query.eq('action', action)
+        }
+        if (significance) {
+          query = query.eq('significance', true)
+        }
+        
+        return query
+      })()
     ])
 
-    const categoryError = currentPeriod.error || baselinePeriod.error
-    if (categoryError) {
-      console.error('Category data error:', categoryError)
-      throw categoryError
+    if (currentPeriodData.error || baselinePeriodData.error) {
+      console.error('Category data error:', currentPeriodData.error || baselinePeriodData.error)
+      throw currentPeriodData.error || baselinePeriodData.error
     }
 
     // Process category data
     const currentCounts = new Map<string, { id: string, name: string, count: number }>()
-    currentPeriod.data?.forEach(moment => {
+    currentPeriodData.data?.forEach(moment => {
       const key = moment.category_id
       const existing = currentCounts.get(key) || { 
         id: key, 
@@ -162,7 +155,7 @@ export default async (req: Request): Promise<Response> => {
     })
 
     const baselineCounts = new Map<string, number>()
-    baselinePeriod.data?.forEach(moment => {
+    baselinePeriodData.data?.forEach(moment => {
       const key = moment.category_id
       baselineCounts.set(key, (baselineCounts.get(key) || 0) + 1)
     })
@@ -170,7 +163,7 @@ export default async (req: Request): Promise<Response> => {
     const currentTotal = Array.from(currentCounts.values()).reduce((sum, cat) => sum + cat.count, 0)
     const baselineTotal = Array.from(baselineCounts.values()).reduce((sum, count) => sum + count, 0)
 
-    const categoryData = Array.from(currentCounts.values())
+    const categoryShare = Array.from(currentCounts.values())
       .filter(cat => cat.count > 0)
       .map(cat => {
         const pct = currentTotal > 0 ? Math.round((cat.count / currentTotal) * 100 * 10) / 10 : 0
@@ -187,51 +180,51 @@ export default async (req: Request): Promise<Response> => {
       })
       .sort((a, b) => b.pct - a.pct)
 
-    // 3. Median days between moments per category
-    const { data: momentsForGaps, error: medianError } = await supabase
+    // 3. Median days between moments per category - optimized query
+    let medianQuery = supabase
       .from('moments')
-      .select('category_id, happened_at, action, significance, categories!inner(id, name)')
+      .select('category_id, happened_at, categories!inner(name)')
       .eq('user_id', user.id)
       .gte('happened_at', fromDate.toISOString())
       .order('category_id, happened_at')
+    
+    if (action && action !== 'both') {
+      medianQuery = medianQuery.eq('action', action)
+    }
+    if (significance) {
+      medianQuery = medianQuery.eq('significance', true)
+    }
+
+    const { data: momentsForGaps, error: medianError } = await medianQuery
 
     if (medianError) {
       console.error('Median data error:', medianError)
       throw medianError
     }
 
-    // Calculate median gaps
+    // Calculate median gaps efficiently
     const categoryGaps = new Map<string, { name: string, gaps: number[] }>()
+    let lastMomentByCategory = new Map<string, Date>()
     
-    let filtered = momentsForGaps || []
-    if (action && action !== 'both') {
-      filtered = filtered.filter(m => m.action === action)
-    }
-    if (significance) {
-      filtered = filtered.filter(m => m.significance)
-    }
-
-    filtered.forEach((moment, index) => {
+    momentsForGaps?.forEach(moment => {
       const categoryId = moment.category_id
       const categoryName = moment.categories.name
+      const momentDate = new Date(moment.happened_at)
       
       if (!categoryGaps.has(categoryId)) {
         categoryGaps.set(categoryId, { name: categoryName, gaps: [] })
       }
       
-      // Find previous moment in same category
-      const prevMoment = filtered
-        .slice(0, index)
-        .reverse()
-        .find(m => m.category_id === categoryId)
-      
-      if (prevMoment) {
-        const gap = (new Date(moment.happened_at).getTime() - new Date(prevMoment.happened_at).getTime()) / (1000 * 60 * 60 * 24)
+      const lastMoment = lastMomentByCategory.get(categoryId)
+      if (lastMoment) {
+        const gap = (momentDate.getTime() - lastMoment.getTime()) / (1000 * 60 * 60 * 24)
         categoryGaps.get(categoryId)?.gaps.push(gap)
       }
+      
+      lastMomentByCategory.set(categoryId, momentDate)
     })
 
-    const medianData = Array.from(categoryGaps.entries())
+    const medianGaps = Array.from(categoryGaps.entries())
       .filter(([_, data]) => data.gaps.length >= 2)
       .map(([categoryId, data]) => {
         const sortedGaps = data.gaps.sort((a, b) => a - b)
@@ -242,16 +235,18 @@ export default async (req: Request): Promise<Response> => {
         return {
           category_id: categoryId,
           name: data.name,
-          median_days: Math.round(median)
+          median_days: Math.round(median * 10) / 10
         }
       })
       .sort((a, b) => a.median_days - b.median_days)
 
     const response = {
-      seriesDaily: seriesData || [],
-      categoryShare: categoryData || [],
-      medianGaps: medianData || []
+      seriesDaily,
+      categoryShare,
+      medianGaps
     }
+
+    console.log(`Trends response: ${seriesDaily.length} daily points, ${categoryShare.length} categories, ${medianGaps.length} median gaps`)
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

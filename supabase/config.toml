@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.nudges]
 verify_jwt = true
+
+[functions.trends-data]
+verify_jwt = true
