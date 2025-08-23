@@ -7,7 +7,8 @@ import { LoadingCard } from '@/components/ui/loading-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'
-import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, RefreshCw, AlertCircle } from 'lucide-react'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, RefreshCw, AlertCircle, ChevronDown } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import { useTrends } from '@/hooks/useTrends'
 import { useNavigate } from 'react-router-dom'
@@ -64,6 +65,13 @@ export const Trends: React.FC = () => {
     range: selectedRange,
     action: selectedAction,
     significance: significanceOnly
+  })
+
+  // Separate query for Given vs Received KPI (always uses 'both')
+  const { data: balanceData } = useTrends({
+    range: selectedRange,
+    action: 'both', // Always both for balance calculation
+    significance: false // Always include all moments for balance
   })
 
   const handleRefresh = async () => {
@@ -262,14 +270,16 @@ export const Trends: React.FC = () => {
   }
 
   const totalMoments = data.seriesDaily.reduce((sum, day) => sum + day.total, 0)
-  const givenMoments = data.seriesDaily.reduce((sum, day) => sum + day.given, 0)
-  const receivedMoments = data.seriesDaily.reduce((sum, day) => sum + day.received, 0)
-  const givenPercentage = totalMoments > 0 ? Math.round((givenMoments / totalMoments) * 100) : 0
+  
+  // Use balance data for Given vs Received calculation
+  const balanceTotalMoments = balanceData ? balanceData.seriesDaily.reduce((sum, day) => sum + day.total, 0) : 0
+  const balanceGivenMoments = balanceData ? balanceData.seriesDaily.reduce((sum, day) => sum + day.given, 0) : 0
+  const givenPercentage = balanceTotalMoments > 0 ? (balanceGivenMoments / balanceTotalMoments) : 0
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
         <div className="mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h1 className="font-display text-2xl font-semibold mb-2">
                 Insights & Trends
@@ -285,19 +295,10 @@ export const Trends: React.FC = () => {
           </div>
         </div>
 
-      {/* Controls */}
-      <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className="ml-auto"
-        >
-          <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-          Refresh
-        </Button>
-        <div className="flex gap-2">
+      {/* Controls - Row 1 */}
+      <div className="flex flex-wrap gap-2 mb-6 p-3 sm:p-4 bg-muted/30 rounded-lg">
+        {/* Range Pills */}
+        <div className="flex gap-2 flex-wrap">
           {RANGE_OPTIONS.map(option => (
             <Button
               key={option.label}
@@ -310,7 +311,8 @@ export const Trends: React.FC = () => {
           ))}
         </div>
         
-        <div className="flex gap-2">
+        {/* Action Filter Chips */}
+        <div className="flex gap-2 flex-wrap">
           {ACTION_OPTIONS.map(option => (
             <Button
               key={option.value}
@@ -323,6 +325,7 @@ export const Trends: React.FC = () => {
           ))}
         </div>
 
+        {/* Significance Filter */}
         <Button
           variant={significanceOnly ? 'default' : 'outline'}
           size="sm"
@@ -332,143 +335,152 @@ export const Trends: React.FC = () => {
           Significant Only
         </Button>
 
-        {hasActiveFilters ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClearFilters}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Clear filters
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled
-            className="text-muted-foreground/50 cursor-not-allowed"
-          >
-            Clear filters
-          </Button>
-        )}
+        {/* Clear Filters */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleClearFilters}
+          disabled={!hasActiveFilters}
+          className={cn(
+            hasActiveFilters 
+              ? "text-muted-foreground hover:text-foreground" 
+              : "text-muted-foreground/50 cursor-not-allowed"
+          )}
+        >
+          Clear filters
+        </Button>
+
+        {/* Refresh - Mobile placement */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          className="sm:ml-auto"
+        >
+          <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+          Refresh
+        </Button>
       </div>
 
-      {/* Key Insights */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* KPI Cards - Row 2 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <Heart className="h-5 w-5 text-primary" />
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            <div className="text-lg font-semibold mb-1">{totalMoments}</div>
-            <div className="text-sm text-muted-foreground">Total Moments</div>
+            <div className="text-base sm:text-lg font-semibold mb-1">{formatNum.format(totalMoments)}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Total Moments</div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <Users className="h-5 w-5 text-primary" />
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            <div className="text-lg font-semibold mb-1">{formatPct1(givenPercentage / 100)}</div>
-            <div className="text-sm text-muted-foreground">Given vs Received</div>
+            <div className="text-base sm:text-lg font-semibold mb-1">{formatPct1(givenPercentage)}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Given vs Received</div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            <div className="text-lg font-semibold mb-1">
+            <div className="text-base sm:text-lg font-semibold mb-1">
               {(() => {
                 const days = selectedRange === '1y' ? 365 : parseInt(selectedRange.replace('d', ''))
                 return totalMoments > 0 ? (totalMoments / days).toFixed(1) : '0'
               })()}
             </div>
-            <div className="text-sm text-muted-foreground">Daily Average</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Daily Average</div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4 text-center">
-            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-              <Calendar className="h-5 w-5 text-primary" />
+          <CardContent className="p-3 sm:p-4 text-center">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            <div className="text-lg font-semibold mb-1">{data.categoryShare.length}</div>
-            <div className="text-sm text-muted-foreground">Active Categories</div>
+            <div className="text-base sm:text-lg font-semibold mb-1">{data.categoryShare.length}</div>
+            <div className="text-xs sm:text-sm text-muted-foreground">Active Categories</div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Moments over time */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              Moments over time
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px]">
-              <AreaChart 
-                data={data.seriesDaily}
-                onClick={(event) => {
-                  if (event?.activeLabel) {
-                    handleTimelineClick(event.activeLabel)
-                  }
-                }}
-              >
-                <XAxis 
-                  dataKey="date"
-                  tickFormatter={(value) => format(parseISO(value), 'MMM d')}
-                />
-                <YAxis />
-                <ChartTooltip 
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0]?.payload;
-                      if (data) {
-                        return (
-                          <div className="bg-background border rounded-lg shadow-lg p-3">
-                            <p className="font-medium">{format(parseISO(label as string), 'MMM d, yyyy')}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Total {data.total} (Given {data.given}, Received {data.received})
-                            </p>
-                          </div>
-                        );
-                      }
+      {/* Section: Moments over time */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            Moments over time
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
+            <AreaChart 
+              data={data.seriesDaily}
+              onClick={(event) => {
+                if (event?.activeLabel) {
+                  handleTimelineClick(event.activeLabel)
+                }
+              }}
+            >
+              <XAxis 
+                dataKey="date"
+                tickFormatter={(value) => format(parseISO(value), 'MMM d')}
+                fontSize={12}
+              />
+              <YAxis fontSize={12} />
+              <ChartTooltip 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0]?.payload;
+                    if (data) {
+                      return (
+                        <div className="bg-background border rounded-lg shadow-lg p-3">
+                          <p className="font-medium">{format(parseISO(label as string), 'MMM d, yyyy')}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Total {data.total} (Given {data.given}, Received {data.received})
+                          </p>
+                        </div>
+                      );
                     }
-                    return null;
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="given"
-                  stackId="1"
-                  stroke="hsl(var(--primary))"
-                  fill="hsl(var(--primary))"
-                  fillOpacity={0.6}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="received"
-                  stackId="1"
-                  stroke="hsl(var(--secondary))"
-                  fill="hsl(var(--secondary))"
-                  fillOpacity={0.6}
-                />
-                <ChartLegend content={<ChartLegendContent />} />
-              </AreaChart>
-            </ChartContainer>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Charts respect the filters above (Action, Significant). Click any point to view moments from that day.
-            </p>
-          </CardContent>
-        </Card>
+                  }
+                  return null;
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="given"
+                stackId="1"
+                stroke="hsl(var(--primary))"
+                fill="hsl(var(--primary))"
+                fillOpacity={0.6}
+              />
+              <Area
+                type="monotone"
+                dataKey="received"
+                stackId="1"
+                stroke="hsl(var(--secondary))"
+                fill="hsl(var(--secondary))"
+                fillOpacity={0.6}
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+            </AreaChart>
+          </ChartContainer>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            Charts respect the filters above (Action, Significant). Click any point to view moments from that day.
+          </p>
+        </CardContent>
+      </Card>
 
-        {/* Category Share */}
+      {/* Section: Category Breakdown + Time Between */}
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
+        {/* Category Breakdown */}
         <Card>
           <CardHeader>
             <CardTitle>Category Breakdown</CardTitle>
@@ -483,16 +495,16 @@ export const Trends: React.FC = () => {
                   onClick={() => handleCategoryClick(category.category_id)}
                 >
                   <div 
-                    className="w-3 h-3 rounded-full"
+                    className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                   />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium flex items-center gap-2">
-                      {category.name} — {formatPct1(category.pct / 100)}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                      <span className="truncate">{category.name} — {formatPct1(category.pct / 100)}</span>
                       {category.delta_pct !== 0 && (
                         <span 
                           className={cn(
-                            "text-xs",
+                            "text-xs flex-shrink-0",
                             category.delta_pct > 0 ? "text-green-600" : "text-red-600"
                           )}
                         >
@@ -507,7 +519,7 @@ export const Trends: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Median Days Between Moments */}
+        {/* Time Between Moments */}
         <Card>
           <CardHeader>
             <CardTitle>Time Between Moments</CardTitle>
@@ -517,8 +529,8 @@ export const Trends: React.FC = () => {
               <div className="space-y-3">
                 {data.medianGaps.slice(0, 6).map((gap, index) => (
                   <div key={gap.category_id} className="flex items-center gap-3">
-                    <div className="flex-1 text-sm font-medium">{gap.name}</div>
-                    <Badge variant="outline" className="text-xs">
+                    <div className="flex-1 text-sm font-medium truncate">{gap.name}</div>
+                    <Badge variant="outline" className="text-xs flex-shrink-0">
                       {formatNum.format(gap.median_days)} {gap.median_days === 1 ? 'day' : 'days'}
                     </Badge>
                   </div>
@@ -533,6 +545,32 @@ export const Trends: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Optional Secondary Section - Collapsible */}
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full mb-4">
+            <ChevronDown className="h-4 w-4 mr-2" />
+            Additional Insights
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Weekly Patterns & Monthly Overview</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Coming soon - Weekly distribution and monthly summaries
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <BarChart3 className="h-8 w-8 mx-auto mb-2" />
+                <p className="text-sm">Weekly patterns and monthly overview will be available here</p>
+              </div>
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   )
 }
