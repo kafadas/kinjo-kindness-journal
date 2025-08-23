@@ -39,6 +39,10 @@ const DevSeedData = lazy(() =>
   import("./pages/DevSeedData").then(module => ({ default: module.DevSeedData }))
 );
 
+const DevTrendsCheck = lazy(() =>
+  import("./pages/DevTrendsCheck").then(module => ({ default: module.DevTrendsCheck }))
+);
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -76,24 +80,34 @@ const App = () => (
                     </AppLayout>
                   } 
                 />
+                <Route 
+                  path="/dev/trends-check" 
+                  element={
+                    <AppLayout>
+                      <Suspense fallback={<div className="p-6">Loading dev tools...</div>}>
+                        <DevTrendsCheck />
+                      </Suspense>
+                    </AppLayout>
+                  } 
+                />
               </>
             )}
             
             {/* Protected app routes */}
-            <Route path="/home" element={<AppLayout><Home /></AppLayout>} />
-            <Route path="/capture" element={<AppLayout><Capture /></AppLayout>} />
-            <Route path="/timeline" element={<AppLayout><Timeline /></AppLayout>} />
-            <Route path="/people" element={<AppLayout><People /></AppLayout>} />
-            <Route path="/people/:id" element={<AppLayout><PersonDetails /></AppLayout>} />
-            <Route path="/categories" element={<AppLayout><Categories /></AppLayout>} />
-            <Route path="/categories/:id" element={<AppLayout><CategoryDetails /></AppLayout>} />
-            <Route path="/trends" element={<AppLayout><Trends /></AppLayout>} />
-            <Route path="/reflection" element={<AppLayout><Reflection /></AppLayout>} />
-            <Route path="/streaks" element={<AppLayout><Streaks /></AppLayout>} />
-            <Route path="/yearly-wrap" element={<AppLayout><YearlyWrap /></AppLayout>} />
-            <Route path="/groups" element={<AppLayout><Groups /></AppLayout>} />
-            <Route path="/preferences" element={<AppLayout><Preferences /></AppLayout>} />
-            <Route path="/privacy" element={<AppLayout><Privacy /></AppLayout>} />
+            <Route path="/home" element={<AppLayout><Home /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/capture" element={<AppLayout><Capture /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/timeline" element={<AppLayout><Timeline /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/people" element={<AppLayout><People /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/people/:id" element={<AppLayout><PersonDetails /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/categories" element={<AppLayout><Categories /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/categories/:id" element={<AppLayout><CategoryDetails /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/trends" element={<AppLayout><Trends /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/reflection" element={<AppLayout><Reflection /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/streaks" element={<AppLayout><Streaks /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/yearly-wrap" element={<AppLayout><YearlyWrap /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/groups" element={<AppLayout><Groups /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/preferences" element={<AppLayout><Preferences /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
+            <Route path="/privacy" element={<AppLayout><Privacy /><Suspense fallback={null}><DevTrendsCheck /></Suspense></AppLayout>} />
             
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
