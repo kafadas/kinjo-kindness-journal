@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Group } from 'lucide-react';
 import { useGroups } from '@/hooks/useGroups';
+import { usePeople } from '@/hooks/usePeople';
 import { DiscreetText } from '@/components/ui/DiscreetText';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,7 +38,11 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
     addPersonToGroupAsync, 
     removePersonFromGroupAsync 
   } = useGroups();
+  const { people: allPeople } = usePeople();
   const { toast } = useToast();
+  
+  // Filter out groups that only contain merged people - simplified for now
+  const availableGroups = groups || [];
   
   const [existingGroupIds, setExistingGroupIds] = useState<string[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
@@ -176,11 +181,11 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
           ) : (
             <>
               {/* Existing Groups */}
-              {groups && groups.length > 0 && (
+              {availableGroups && availableGroups.length > 0 && (
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">Select Groups</Label>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {groups.map((group) => (
+                    {availableGroups.map((group) => (
                       <div key={group.id} className="flex items-center space-x-2">
                         <Checkbox
                           id={`group-${group.id}`}

@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/use-toast'
 import { useOptimisticUpdates } from '@/hooks/useOptimisticUpdates'
+import { useSettings } from '@/hooks/useSettings'
+import { createMoment } from '@/lib/db'
 
 interface CaptureData {
   text: string
@@ -15,6 +17,7 @@ export const useCapture = () => {
   const { toast } = useToast()
   const { user, session, isAuthenticated } = useAuth()
   const { addMomentOptimistically, rollbackMomentOptimistically } = useOptimisticUpdates()
+  const { settings } = useSettings()
 
   const capture = async ({ text, seedPerson, seedCategory }: CaptureData) => {
     setLoading(true)
@@ -27,6 +30,37 @@ export const useCapture = () => {
         throw new Error('You must be logged in to capture moments')
       }
 
+      // Quick save: if only text is provided, create moment directly with defaults  
+      if (text.trim() && !seedPerson && !seedCategory) {
+        const { data, error } = await supabase
+          .from('moments')
+          .insert({
+            description: text.trim(),
+            category_id: settings?.default_category_id || null,
+            action: 'given',
+            happened_at: new Date().toISOString(),
+            user_id: user.id,
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        const moment = data
+        capturedData = { moment }
+        
+        // Add optimistic update
+        addMomentOptimistically(moment as any)
+
+        toast({
+          title: 'Moment captured!',
+          description: 'Your kindness has been recorded.',
+        })
+
+        return capturedData
+      }
+
+      // Use AI processing for more complex captures
       const requestBody = { text, seedPerson, seedCategory }
       console.log('Capture request - Auth status:', { 
         isAuthenticated, 

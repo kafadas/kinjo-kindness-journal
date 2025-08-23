@@ -28,6 +28,7 @@ import NotFound from "./pages/NotFound";
 
 // Development-only imports
 const isDev = import.meta.env.MODE !== 'production';
+const hasDevParam = () => new URLSearchParams(window.location.search).has('dev');
 
 // Lazy load dev component
 const DevRLSCheck = lazy(() => 
@@ -49,7 +50,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             
             {/* Development routes */}
-            {isDev && (
+            {(isDev || hasDevParam()) && (
               <Route 
                 path="/dev/rls-check" 
                 element={

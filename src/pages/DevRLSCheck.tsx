@@ -126,8 +126,8 @@ export const DevRLSCheck = () => {
   }
 
   const insertSampleData = async () => {
-    if (!user || !import.meta.env.DEV) {
-      toast.error('Sample data insertion is only available in development')
+    if (!user) {
+      toast.error('You must be logged in to insert sample data')
       return
     }
 
@@ -311,15 +311,13 @@ export const DevRLSCheck = () => {
         <Button variant="outline" onClick={clearResults} disabled={isRunning}>
           Clear Results
         </Button>
-        {import.meta.env.DEV && (
-          <Button 
-            variant="secondary" 
-            onClick={insertSampleData} 
-            disabled={isInsertingSample || isRunning}
-          >
-            {isInsertingSample ? 'Inserting...' : 'Insert Sample Data'}
-          </Button>
-        )}
+        <Button 
+          variant="secondary" 
+          onClick={insertSampleData} 
+          disabled={isInsertingSample || isRunning}
+        >
+          {isInsertingSample ? 'Inserting...' : 'Insert Sample Data'}
+        </Button>
       </div>
 
       <div className="space-y-4">

@@ -8,10 +8,13 @@ import type { Person, CreatePerson } from '@/lib/db/types'
 export const usePeople = () => {
   const queryClient = useQueryClient()
 
-  const { data: people = [], isLoading, error } = useQuery({
+  const { data: allPeople = [], isLoading, error } = useQuery({
     queryKey: ['people'],
     queryFn: () => getPeople()
   })
+
+  // Filter out merged people
+  const people = allPeople.filter(person => !person.merged_into)
 
   const createPersonMutation = useMutation({
     mutationFn: (person: CreatePerson) => dbCreatePerson(person),
@@ -26,14 +29,6 @@ export const usePeople = () => {
 
   const mergePersonMutation = useMutation({
     mutationFn: async ({ fromPersonId, toPersonId }: { fromPersonId: string, toPersonId: string }) => {
-      // Update the person to mark as merged
-      const { error: mergeError } = await supabase
-        .from('people')
-        .update({ merged_into: toPersonId })
-        .eq('id', fromPersonId)
-
-      if (mergeError) throw mergeError
-
       // Update all moments to point to the target person
       const { error: momentsError } = await supabase
         .from('moments')
@@ -41,6 +36,22 @@ export const usePeople = () => {
         .eq('person_id', fromPersonId)
 
       if (momentsError) throw momentsError
+
+      // Update all person_groups to point to the target person
+      const { error: groupsError } = await supabase
+        .from('person_groups')
+        .update({ person_id: toPersonId })
+        .eq('person_id', fromPersonId)
+
+      if (groupsError) throw groupsError
+
+      // Finally, update the person to mark as merged
+      const { error: mergeError } = await supabase
+        .from('people')
+        .update({ merged_into: toPersonId })
+        .eq('id', fromPersonId)
+
+      if (mergeError) throw mergeError
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['people'] })
@@ -56,8 +67,9 @@ export const usePeople = () => {
     if (!searchTerm.trim()) return people
     
     return people.filter(person => 
-      person.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.aliases?.some(alias => alias.toLowerCase().includes(searchTerm.toLowerCase()))
+      !person.merged_into &&
+      (person.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      person.aliases?.some(alias => alias.toLowerCase().includes(searchTerm.toLowerCase())))
     )
   }
 
