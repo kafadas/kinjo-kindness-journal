@@ -123,12 +123,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          action: Database["public"]["Enums"]["action_t"]
+          action?: Database["public"]["Enums"]["action_t"]
           attachment_count?: number | null
           category_id?: string | null
           created_at?: string | null
           description?: string | null
-          happened_at: string
+          happened_at?: string
           id?: string
           person_id?: string | null
           significance?: boolean | null
@@ -435,6 +435,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      category_share_delta: {
+        Args: { p_end: string; p_start: string; p_user: string }
+        Returns: {
+          category_id: string
+          delta_pct: number
+          name: string
+          pct: number
+        }[]
+      }
       compute_streak: {
         Args: { _user: string }
         Returns: {
@@ -453,6 +462,15 @@ export type Database = {
         }
         Returns: string
       }
+      daily_moment_counts: {
+        Args: { p_end: string; p_start: string; p_user: string }
+        Returns: {
+          d: string
+          given: number
+          received: number
+          total: number
+        }[]
+      }
       given_received_by_category: {
         Args: { _from: string; _to: string; _user: string }
         Returns: {
@@ -460,6 +478,14 @@ export type Database = {
           category_name: string
           given_count: number
           received_count: number
+        }[]
+      }
+      median_gap_by_category: {
+        Args: { p_end: string; p_start: string; p_user: string }
+        Returns: {
+          category_id: string
+          median_days: number
+          name: string
         }[]
       }
       opportunities_people: {
@@ -470,6 +496,10 @@ export type Database = {
           last_recorded: string
           person_id: string
         }[]
+      }
+      refresh_person_last_recorded: {
+        Args: { p_person_id: string }
+        Returns: undefined
       }
       significant_moments: {
         Args: { _from: string; _to: string; _user: string }

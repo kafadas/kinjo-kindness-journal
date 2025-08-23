@@ -4,13 +4,17 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { LoadingCard } from '@/components/ui/loading-card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'
-import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter } from 'lucide-react'
+import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, RefreshCw, AlertCircle } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import { useTrends } from '@/hooks/useTrends'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
 
 const RANGE_OPTIONS = [
   { label: '30d', value: 30 },
@@ -55,15 +59,22 @@ const CHART_COLORS = [
 
 export const Trends: React.FC = () => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [selectedRange, setSelectedRange] = useState(90)
   const [selectedAction, setSelectedAction] = useState<'given' | 'received' | 'both'>('both')
   const [significanceOnly, setSignificanceOnly] = useState(false)
 
-  const { data, isLoading, error } = useTrends({
+  const { data, isLoading, isError, error, refetch } = useTrends({
     range: selectedRange,
     action: selectedAction,
     significance: significanceOnly
   })
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['trends', user?.id] })
+    refetch()
+  }
 
   const handleCategoryClick = (categoryId: string) => {
     navigate(`/categories/${categoryId}`)
@@ -72,18 +83,43 @@ export const Trends: React.FC = () => {
   const handleTimelineClick = (date: string) => {
     navigate(`/timeline?date=${date}`)
   }
-  if (error) {
+  if (isError) {
     return (
       <div className="p-6 max-w-6xl mx-auto">
-        <EmptyState
-          icon={TrendingUp}
-          title="Unable to load trends"
-          description="There was an error loading your trends data. Please try again."
-          action={{
-            label: "Retry",
-            onClick: () => window.location.reload()
-          }}
-        />
+        <div className="mb-6">
+          <h1 className="font-display text-2xl font-semibold mb-2">
+            Insights & Trends
+          </h1>
+          <p className="text-muted-foreground">
+            Discover gentle patterns in your kindness journey
+          </p>
+        </div>
+        
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Unable to load trends data. {error?.message || 'Please try again.'}
+            {process.env.NODE_ENV === 'development' && error && (
+              <details className="mt-2 text-xs opacity-70">
+                <summary className="cursor-pointer">Debug info</summary>
+                <pre className="mt-1 whitespace-pre-wrap break-all">
+                  {error.toString()}
+                </pre>
+              </details>
+            )}
+          </AlertDescription>
+        </Alert>
+
+        <div className="flex gap-2">
+          <Button onClick={handleRefresh} disabled={isLoading}>
+            <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+            Refresh Data
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/capture')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Moment
+          </Button>
+        </div>
       </div>
     )
   }
@@ -99,8 +135,44 @@ export const Trends: React.FC = () => {
             Discover gentle patterns in your kindness journey
           </p>
         </div>
-        <div className="grid gap-6">
-          <LoadingCard />
+
+        {/* Loading Controls */}
+        <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
+          <div className="flex gap-2">
+            {RANGE_OPTIONS.map(option => (
+              <Skeleton key={option.value} className="h-8 w-12" />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {ACTION_OPTIONS.map((option, i) => (
+              <Skeleton key={i} className="h-8 w-16" />
+            ))}
+          </div>
+          <Skeleton className="h-8 w-32" />
+        </div>
+
+        {/* Loading Key Insights */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 text-center">
+                <Skeleton className="w-10 h-10 rounded-lg mx-auto mb-2" />
+                <Skeleton className="h-5 w-12 mx-auto mb-1" />
+                <Skeleton className="h-4 w-20 mx-auto" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px]" />
+            </CardContent>
+          </Card>
           <LoadingCard />
           <LoadingCard />
         </div>
@@ -134,6 +206,13 @@ export const Trends: React.FC = () => {
             onClick: () => navigate('/capture')
           }}
         />
+        
+        <div className="flex justify-center mt-4">
+          <Button variant="outline" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Data
+          </Button>
+        </div>
       </div>
     )
   }
@@ -156,6 +235,16 @@ export const Trends: React.FC = () => {
 
       {/* Controls */}
       <div className="flex flex-wrap gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          className="ml-auto"
+        >
+          <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+          Refresh
+        </Button>
         <div className="flex gap-2">
           {RANGE_OPTIONS.map(option => (
             <Button
@@ -248,7 +337,14 @@ export const Trends: React.FC = () => {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px]">
-              <AreaChart data={data.seriesDaily}>
+              <AreaChart 
+                data={data.seriesDaily}
+                onClick={(event) => {
+                  if (event?.activeLabel) {
+                    handleTimelineClick(event.activeLabel)
+                  }
+                }}
+              >
                 <XAxis 
                   dataKey="date"
                   tickFormatter={(value) => format(parseISO(value), 'MMM d')}
@@ -277,6 +373,9 @@ export const Trends: React.FC = () => {
                 <ChartLegend content={<ChartLegendContent />} />
               </AreaChart>
             </ChartContainer>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Click any point to view moments from that day
+            </p>
           </CardContent>
         </Card>
 
