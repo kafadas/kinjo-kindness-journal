@@ -31,13 +31,13 @@ export const useTrends = (options: UseTrendsOptions) => {
   return useQuery({
     queryKey: ['trends', options],
     queryFn: async (): Promise<TrendsData> => {
-      const params = new URLSearchParams({
-        range: options.range.toString(),
+      const body = {
+        range: options.range,
         ...(options.action && options.action !== 'both' && { action: options.action }),
-        ...(options.significance && { significance: 'true' })
-      })
+        ...(options.significance && { significance: options.significance })
+      }
 
-      const { data, error } = await supabase.functions.invoke('trends-data?' + params.toString())
+      const { data, error } = await supabase.functions.invoke('trends-data', { body })
 
       if (error) {
         console.error('Trends data error:', error)

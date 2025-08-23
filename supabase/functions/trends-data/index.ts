@@ -33,10 +33,11 @@ export default async (req: Request): Promise<Response> => {
       })
     }
 
-    const url = new URL(req.url)
-    const range = parseInt(url.searchParams.get('range') || '90')
-    const action = url.searchParams.get('action') as 'given' | 'received' | 'both' | null
-    const significance = url.searchParams.get('significance') === 'true'
+    // Parse parameters from request body
+    const requestBody = req.method === 'POST' ? await req.json() : {}
+    const range = requestBody.range || parseInt(new URL(req.url).searchParams.get('range') || '90')
+    const action = requestBody.action || new URL(req.url).searchParams.get('action') as 'given' | 'received' | 'both' | null
+    const significance = requestBody.significance || new URL(req.url).searchParams.get('significance') === 'true'
 
     const fromDate = new Date()
     fromDate.setDate(fromDate.getDate() - range)
@@ -70,13 +71,29 @@ export default async (req: Request): Promise<Response> => {
       throw seriesError
     }
 
+    // Early return if no data
+    if (!seriesRawData || seriesRawData.length === 0) {
+      console.log('No series data found, returning empty response')
+      return new Response(JSON.stringify({
+        seriesDaily: [],
+        categoryShare: [],
+        medianGaps: []
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Process series data efficiently
     const dateMap = new Map<string, { total: number, given: number, received: number }>()
     
-    // Initialize all dates in range
+    // Initialize all dates in range using counter-based approach to avoid infinite loops
     const endDate = new Date()
-    for (let d = new Date(fromDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split('T')[0]
+    const msInDay = 24 * 60 * 60 * 1000
+    const startTime = fromDate.getTime()
+    const endTime = endDate.getTime()
+    
+    for (let time = startTime; time <= endTime; time += msInDay) {
+      const dateStr = new Date(time).toISOString().split('T')[0]
       dateMap.set(dateStr, { total: 0, given: 0, received: 0 })
     }
     
