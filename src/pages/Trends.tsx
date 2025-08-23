@@ -70,6 +70,18 @@ export const Trends: React.FC = () => {
     refetch()
   }
 
+  const handleClearFilters = () => {
+    setSelectedAction('both')
+    setSignificanceOnly(false)
+    // Trigger refetch after state updates
+    setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ['trends', user?.id] })
+      refetch()
+    }, 0)
+  }
+
+  const hasActiveFilters = selectedAction !== 'both' || significanceOnly
+
   const handleCategoryClick = (categoryId: string) => {
     navigate(`/categories/${categoryId}`)
   }
@@ -307,6 +319,17 @@ export const Trends: React.FC = () => {
           <Filter className="h-4 w-4 mr-2" />
           Significant Only
         </Button>
+
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearFilters}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Clear filters
+          </Button>
+        )}
       </div>
 
       {/* Key Insights */}
