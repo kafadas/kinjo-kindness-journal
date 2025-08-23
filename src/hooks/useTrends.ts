@@ -37,8 +37,7 @@ export const useTrends = (options: UseTrendsOptions) => {
         ...(options.significance && { significance: 'true' })
       })
 
-      const url = `trends-data?${params}`
-      const { data, error } = await supabase.functions.invoke(url)
+      const { data, error } = await supabase.functions.invoke('trends-data?' + params.toString())
 
       if (error) {
         console.error('Trends data error:', error)

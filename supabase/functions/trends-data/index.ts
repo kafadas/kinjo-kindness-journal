@@ -74,7 +74,8 @@ export default async (req: Request): Promise<Response> => {
     const dateMap = new Map<string, { total: number, given: number, received: number }>()
     
     // Initialize all dates in range
-    for (let d = new Date(fromDate); d <= new Date(); d.setDate(d.getDate() + 1)) {
+    const endDate = new Date()
+    for (let d = new Date(fromDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const dateStr = d.toISOString().split('T')[0]
       dateMap.set(dateStr, { total: 0, given: 0, received: 0 })
     }
