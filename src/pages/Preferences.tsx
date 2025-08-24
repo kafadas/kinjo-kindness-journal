@@ -55,15 +55,67 @@ export const Preferences: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="timezone">Timezone</Label>
-                  <Select>
+                  <Select defaultValue="Asia/Dubai">
                     <SelectTrigger>
                       <SelectValue placeholder="Select timezone" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="utc">UTC</SelectItem>
-                      <SelectItem value="est">Eastern Time</SelectItem>
-                      <SelectItem value="pst">Pacific Time</SelectItem>
-                      <SelectItem value="cet">Central European Time</SelectItem>
+                    <SelectContent className="max-h-60">
+                      {/* Middle East & Gulf */}
+                      <SelectItem value="Asia/Dubai">UAE Time (Dubai/Abu Dhabi)</SelectItem>
+                      <SelectItem value="Asia/Kuwait">Kuwait Time</SelectItem>
+                      <SelectItem value="Asia/Qatar">Qatar Time</SelectItem>
+                      <SelectItem value="Asia/Bahrain">Bahrain Time</SelectItem>
+                      <SelectItem value="Asia/Riyadh">Saudi Arabia Time</SelectItem>
+                      <SelectItem value="Asia/Muscat">Oman Time</SelectItem>
+                      
+                      {/* UTC */}
+                      <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
+                      
+                      {/* Europe */}
+                      <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
+                      <SelectItem value="Europe/Paris">Paris (CET/CEST)</SelectItem>
+                      <SelectItem value="Europe/Berlin">Berlin (CET/CEST)</SelectItem>
+                      <SelectItem value="Europe/Rome">Rome (CET/CEST)</SelectItem>
+                      <SelectItem value="Europe/Madrid">Madrid (CET/CEST)</SelectItem>
+                      <SelectItem value="Europe/Amsterdam">Amsterdam (CET/CEST)</SelectItem>
+                      <SelectItem value="Europe/Stockholm">Stockholm (CET/CEST)</SelectItem>
+                      <SelectItem value="Europe/Moscow">Moscow (MSK)</SelectItem>
+                      
+                      {/* Asia */}
+                      <SelectItem value="Asia/Kolkata">India (IST)</SelectItem>
+                      <SelectItem value="Asia/Singapore">Singapore (SGT)</SelectItem>
+                      <SelectItem value="Asia/Hong_Kong">Hong Kong (HKT)</SelectItem>
+                      <SelectItem value="Asia/Shanghai">China (CST)</SelectItem>
+                      <SelectItem value="Asia/Tokyo">Japan (JST)</SelectItem>
+                      <SelectItem value="Asia/Seoul">South Korea (KST)</SelectItem>
+                      <SelectItem value="Asia/Bangkok">Thailand (ICT)</SelectItem>
+                      <SelectItem value="Asia/Jakarta">Indonesia (WIB)</SelectItem>
+                      <SelectItem value="Asia/Manila">Philippines (PST)</SelectItem>
+                      
+                      {/* North America */}
+                      <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                      <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                      <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                      <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                      <SelectItem value="America/Toronto">Toronto (ET)</SelectItem>
+                      <SelectItem value="America/Vancouver">Vancouver (PT)</SelectItem>
+                      
+                      {/* Australia & Oceania */}
+                      <SelectItem value="Australia/Sydney">Sydney (AEST/AEDT)</SelectItem>
+                      <SelectItem value="Australia/Melbourne">Melbourne (AEST/AEDT)</SelectItem>
+                      <SelectItem value="Australia/Perth">Perth (AWST)</SelectItem>
+                      <SelectItem value="Pacific/Auckland">New Zealand (NZST/NZDT)</SelectItem>
+                      
+                      {/* Africa */}
+                      <SelectItem value="Africa/Cairo">Egypt (EET)</SelectItem>
+                      <SelectItem value="Africa/Johannesburg">South Africa (SAST)</SelectItem>
+                      <SelectItem value="Africa/Lagos">Nigeria (WAT)</SelectItem>
+                      <SelectItem value="Africa/Nairobi">Kenya (EAT)</SelectItem>
+                      
+                      {/* South America */}
+                      <SelectItem value="America/Sao_Paulo">Brazil (BRT)</SelectItem>
+                      <SelectItem value="America/Argentina/Buenos_Aires">Argentina (ART)</SelectItem>
+                      <SelectItem value="America/Santiago">Chile (CLT)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
