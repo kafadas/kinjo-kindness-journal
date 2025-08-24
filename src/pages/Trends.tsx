@@ -33,7 +33,7 @@ const chartConfig = {
   },
   received: {
     label: 'Kindness Received', 
-    color: 'hsl(var(--accent))'
+    color: 'hsl(var(--success))'
   },
   total: {
     label: 'Total Moments',
@@ -437,8 +437,8 @@ export const Trends: React.FC = () => {
                   type="monotone"
                   dataKey="received"
                   stackId={selectedAction === 'both' ? "1" : undefined}
-                  stroke="hsl(var(--accent))"
-                  fill="hsl(var(--accent))"
+                  stroke="hsl(var(--success))"
+                  fill="hsl(var(--success))"
                   fillOpacity={0.6}
                 />
               )}
