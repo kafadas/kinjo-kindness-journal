@@ -73,7 +73,7 @@ export const TimelineFiltersComponent = ({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <Filter className="h-4 w-4" />
-            Filters
+            Advanced Filters
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button
@@ -84,16 +84,16 @@ export const TimelineFiltersComponent = ({
             >
               {isOpen ? (
                 <>
-                  Hide Filters
+                  Hide Advanced Filters
                   <ChevronUp className="h-4 w-4" />
                 </>
               ) : (
-                <>
-                  Show Filters
-                  <ChevronDown className="h-4 w-4" />
-                </>
-              )}
-            </Button>
+            <>
+              Show Advanced Filters
+              <ChevronDown className="h-4 w-4" />
+            </>
+          )}
+        </Button>
           </div>
         </div>
       </CardHeader>
@@ -173,27 +173,6 @@ export const TimelineFiltersComponent = ({
                 </PopoverContent>
               </Popover>
             </div>
-          </div>
-
-          {/* Action Type */}
-          <div>
-            <Label>Action Type</Label>
-            <ToggleGroup 
-              type="single" 
-              value={filters.action || 'both'} 
-              onValueChange={(value) => updateFilter('action', value === 'both' ? undefined : value as 'given' | 'received')}
-              className="justify-start"
-            >
-              <ToggleGroupItem value="both" variant="outline" size="sm">
-                Both
-              </ToggleGroupItem>
-              <ToggleGroupItem value="given" variant="outline" size="sm">
-                Given
-              </ToggleGroupItem>
-              <ToggleGroupItem value="received" variant="outline" size="sm">
-                Received
-              </ToggleGroupItem>
-            </ToggleGroup>
           </div>
 
           {/* Category */}
