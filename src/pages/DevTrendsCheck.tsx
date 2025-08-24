@@ -8,14 +8,11 @@ import { useAuth } from '@/hooks/useAuth'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { RefreshCw, ExternalLink, Database, User, Calendar, BarChart3, AlertCircle, CheckCircle, Filter, Activity, Heart, ArrowUp, Target, Zap } from 'lucide-react'
+import { RefreshCw, ExternalLink, Database, User, Calendar, BarChart3, AlertCircle, CheckCircle, Filter, Activity } from 'lucide-react'
 import { RANGE_OPTIONS, type DateRangeLabel, getRange } from '@/lib/dateRange'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { formatPct1, formatNum, formatDelta } from '@/lib/formatters'
-import { computeBalance, formatPct, calculateDailyAverage, countActiveCategories, getBalanceMessage } from '@/lib/trendsUtils'
-import { ChartContainer } from '@/components/ui/chart'
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 
 const ACTION_OPTIONS = [
   { label: 'Both', value: 'both' },
@@ -397,117 +394,7 @@ export const DevTrendsCheck: React.FC = () => {
         </Button>
       </div>
 
-        <div className="grid gap-6">
-        {/* Compact Summary for Dev Check */}
-        {rpcResults && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Quick Summary Check
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {(() => {
-                const dailyData = rpcResults.daily.data || []
-                const categoryData = rpcResults.category.data || []
-                
-                const totalMoments = dailyData.reduce((sum: number, day: any) => sum + (day.total || 0), 0)
-                const givenMoments = dailyData.reduce((sum: number, day: any) => sum + (day.given || 0), 0)
-                const receivedMoments = dailyData.reduce((sum: number, day: any) => sum + (day.received || 0), 0)
-                const balance = computeBalance({ given: givenMoments, received: receivedMoments })
-                const dailyAverage = calculateDailyAverage(dailyData)
-                const activeCategories = countActiveCategories(categoryData)
-                
-                // Log parity check
-                const stackedSum = dailyData.reduce((sum: number, day: any) => sum + (day.given || 0) + (day.received || 0), 0)
-                if (totalMoments !== stackedSum) {
-                  console.warn('PARITY MISMATCH:', { 
-                    totalFromFunction: totalMoments, 
-                    stackedAreaSum: stackedSum, 
-                    difference: totalMoments - stackedSum 
-                  })
-                }
-                
-                return (
-                  <div className="space-y-4">
-                    {/* Summary tiles */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <Heart className="h-4 w-4 text-primary" />
-                          <span className="text-lg font-semibold">{formatNum.format(totalMoments)}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">Total</div>
-                      </div>
-                      
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <ArrowUp className="h-4 w-4 text-chart-1" />
-                          <span className="text-lg font-semibold">{formatPct(balance.givenPct)}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">Given</div>
-                      </div>
-                      
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <Zap className="h-4 w-4 text-chart-2" />
-                          <span className="text-lg font-semibold">
-                            {dailyAverage > 0 ? dailyAverage.toFixed(1) : 'N/A'}
-                          </span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">Daily Avg</div>
-                      </div>
-                      
-                      <div className="text-center p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center justify-center gap-1 mb-1">
-                          <Target className="h-4 w-4 text-chart-3" />
-                          <span className="text-lg font-semibold">{activeCategories}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">Categories</div>
-                      </div>
-                    </div>
-                    
-                    {/* Kindness balance numbers */}
-                    <div className="p-3 bg-muted/50 rounded-lg">
-                      <div className="text-xs text-muted-foreground mb-2">Balance:</div>
-                      <div className="text-sm">
-                        Given: {givenMoments} ({formatPct(balance.givenPct)}) | 
-                        Received: {receivedMoments} ({formatPct(balance.receivedPct)})
-                      </div>
-                    </div>
-                    
-                    {/* Mini sparkline */}
-                    {dailyData.length > 1 && (
-                      <div className="h-16">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={dailyData.slice(-14)}>
-                            <Area
-                              type="monotone"
-                              dataKey="given"
-                              stackId="1"
-                              stroke="hsl(var(--chart-1))"
-                              fill="hsl(var(--chart-1))"
-                              fillOpacity={0.6}
-                            />
-                            <Area
-                              type="monotone"
-                              dataKey="received"
-                              stackId="1"
-                              stroke="hsl(var(--chart-2))"
-                              fill="hsl(var(--chart-2))"
-                              fillOpacity={0.6}
-                            />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
-            </CardContent>
-          </Card>
-        )}
+      <div className="grid gap-6">
         {/* User Info */}
         <Card>
           <CardHeader>
