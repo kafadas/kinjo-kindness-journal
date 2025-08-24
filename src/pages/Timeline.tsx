@@ -45,9 +45,8 @@ export const Timeline: React.FC = () => {
   const { people } = usePeople();
   const { categories } = useCategories();
   
-  // Debounced search state
+  // Search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   
   // Initialize filters from URL parameters
   const getInitialFilters = (): TimelineFilters => {
@@ -77,9 +76,13 @@ export const Timeline: React.FC = () => {
       };
     }
     
-    if (action && (action === 'given' || action === 'received')) {
-      filters.action = action as 'given' | 'received';
+    // Handle action filter from URL (from trends navigation)
+    if (action === 'given' || action === 'received') {
+      filters.action = action;
     }
+    // Note: 'both' is the default (no filter)
+    
+    // Handle significance filter from URL (from trends navigation)  
     if (significant === '1') filters.significance = true;
     if (q) filters.search = q;
     if (categoryId) filters.categoryId = categoryId;
@@ -98,25 +101,19 @@ export const Timeline: React.FC = () => {
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
 
-  // Update draft filters when search query changes
+  // Update draft filters when search query changes (but don't auto-apply)
   useEffect(() => {
-    setDraftFilters(prev => ({ ...prev, search: debouncedSearch || undefined }));
-  }, [debouncedSearch]);
-
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 350);
-    return () => clearTimeout(timer);
+    setDraftFilters(prev => ({ ...prev, search: searchQuery || undefined }));
   }, [searchQuery]);
 
-  // Initialize search from URL
+  // Remove auto-debouncing for search - require manual Apply Filters
+  // const timer is removed - search will only apply when user clicks Apply Filters
+
+  // Initialize search from URL  
   useEffect(() => {
     const q = searchParams.get('q');
     if (q) {
       setSearchQuery(q);
-      setDebouncedSearch(q);
     }
   }, []);
 
@@ -184,14 +181,12 @@ export const Timeline: React.FC = () => {
     setDraftFilters(appliedFilters);
     const q = searchParams.get('q');
     setSearchQuery(q || '');
-    setDebouncedSearch(q || '');
   }, [appliedFilters, searchParams]);
 
   // Clear all filters
   const handleClearFilters = useCallback(() => {
     setDraftFilters({});
     setSearchQuery('');
-    setDebouncedSearch('');
     setSearchParams(new URLSearchParams(), { replace: true });
     setAppliedFilters({});
   }, [setSearchParams]);

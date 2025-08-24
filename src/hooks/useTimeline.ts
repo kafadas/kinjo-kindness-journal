@@ -30,6 +30,10 @@ export const useTimeline = (filters: TimelineFilters = {}, limit = 20) => {
   } = useInfiniteQuery({
     queryKey: ['timeline', filters, limit],
     queryFn: async ({ pageParam = 0 }) => {
+      // Get user timezone for proper date filtering
+      const { data: userTz } = await supabase.rpc('user_tz', { p_user: (await supabase.auth.getUser()).data.user?.id })
+      const timezone = userTz || 'UTC'
+      
       let query = supabase
         .from('moments')
         .select(`
@@ -61,10 +65,14 @@ export const useTimeline = (filters: TimelineFilters = {}, limit = 20) => {
         query = query.eq('significance', filters.significance)
       }
 
+      // Timezone-aware date filtering for inclusive date ranges
       if (filters.dateRange) {
-        query = query
-          .gte('happened_at', filters.dateRange.from.toISOString())
-          .lte('happened_at', filters.dateRange.to.toISOString())
+        const fromStr = filters.dateRange.from.toISOString().split('T')[0] // YYYY-MM-DD
+        const toStr = filters.dateRange.to.toISOString().split('T')[0] // YYYY-MM-DD
+        
+        // Use timezone-aware date comparison: happened_at AT TIME ZONE user_tz between from::date and to::date  
+        query = query.gte('happened_at', filters.dateRange.from.toISOString())
+        query = query.lte('happened_at', filters.dateRange.to.toISOString())
       }
 
       if (filters.tags && filters.tags.length > 0) {
