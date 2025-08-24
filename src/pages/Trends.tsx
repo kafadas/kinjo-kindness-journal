@@ -66,13 +66,6 @@ export const Trends: React.FC = () => {
     significance: significanceOnly
   })
 
-  // Separate query for Given vs Received KPI (always uses 'both')
-  const { data: balanceData } = useTrends({
-    range: selectedRange,
-    action: 'both', // Always both for balance calculation
-    significance: false // Always include all moments for balance
-  })
-
   const handleClearFilters = () => {
     clearFilters()
   }
@@ -240,10 +233,9 @@ export const Trends: React.FC = () => {
 
   const totalMoments = data.seriesDaily.reduce((sum, day) => sum + day.total, 0)
   
-  // Use balance data for Given vs Received calculation
-  const balanceTotalMoments = balanceData ? balanceData.seriesDaily.reduce((sum, day) => sum + day.total, 0) : 0
-  const balanceGivenMoments = balanceData ? balanceData.seriesDaily.reduce((sum, day) => sum + day.given, 0) : 0
-  const givenPercentage = balanceTotalMoments > 0 ? (balanceGivenMoments / balanceTotalMoments) : 0
+  // Use filtered data for Given vs Received calculation (remove separate query)
+  const totalGivenMoments = data ? data.seriesDaily.reduce((sum, day) => sum + day.given, 0) : 0
+  const givenPercentage = totalMoments > 0 ? (totalGivenMoments / totalMoments) : 0
 
   return (
     <div className="p-3 sm:p-6 max-w-6xl mx-auto w-full">
@@ -385,8 +377,15 @@ export const Trends: React.FC = () => {
             <AreaChart 
               data={data.seriesDaily}
               onClick={(event) => {
-                if (event?.activeLabel) {
-                  handleTimelineClick(event.activeLabel)
+                if (event?.activePayload?.[0]?.payload?.date) {
+                  const clickedDate = event.activePayload[0].payload.date
+                  const params = new URLSearchParams({
+                    date: clickedDate,
+                    range: 'day',
+                    action: selectedAction,
+                    significant: significanceOnly ? '1' : '0'
+                  })
+                  navigate(`/timeline?${params.toString()}`)
                 }
               }}
             >
@@ -395,17 +394,39 @@ export const Trends: React.FC = () => {
                 tickFormatter={(value) => format(parseISO(value), 'MMM d')}
                 fontSize={12}
               />
-              <YAxis fontSize={12} />
+              <YAxis 
+                fontSize={12}
+                domain={(() => {
+                  if (selectedAction === 'both') {
+                    // For both, set domain to max of (given + received)
+                    const maxTotal = Math.max(...data.seriesDaily.map(d => d.given + d.received))
+                    return [0, maxTotal || 1]
+                  } else {
+                    // For single action, set domain to max of that action's values
+                    const values = data.seriesDaily.map(d => selectedAction === 'given' ? d.given : d.received)
+                    const maxValue = Math.max(...values)
+                    return [0, maxValue || 1]
+                  }
+                })()}
+              />
               <ChartTooltip 
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0]?.payload;
                     if (data) {
                       return (
-                        <div className="bg-background border rounded-lg shadow-lg p-3">
+                        <div className="bg-background border rounded-lg shadow-lg p-3 cursor-pointer">
                           <p className="font-medium">{format(parseISO(label as string), 'MMM d, yyyy')}</p>
                           <p className="text-sm text-muted-foreground">
-                            Total {data.total} (Given {data.given}, Received {data.received})
+                            {selectedAction === 'both' 
+                              ? `Total ${data.total} (Given ${data.given}, Received ${data.received})`
+                              : selectedAction === 'given'
+                              ? `Given ${data.given}`
+                              : `Received ${data.received}`
+                            }
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Click to view timeline
                           </p>
                         </div>
                       );
@@ -414,23 +435,35 @@ export const Trends: React.FC = () => {
                   return null;
                 }}
               />
-              <Area
-                type="monotone"
-                dataKey="given"
-                stackId="1"
-                stroke="hsl(var(--primary))"
-                fill="hsl(var(--primary))"
-                fillOpacity={0.6}
-              />
-              <Area
-                type="monotone"
-                dataKey="received"
-                stackId="1"
-                stroke="hsl(var(--secondary))"
-                fill="hsl(var(--secondary))"
-                fillOpacity={0.6}
-              />
-              <ChartLegend content={<ChartLegendContent />} />
+              {selectedAction === 'both' ? (
+                <>
+                  <Area
+                    type="monotone"
+                    dataKey="given"
+                    stackId="1"
+                    stroke="hsl(var(--primary))"
+                    fill="hsl(var(--primary))"
+                    fillOpacity={0.6}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="received"
+                    stackId="1"
+                    stroke="hsl(var(--secondary))"
+                    fill="hsl(var(--secondary))"
+                    fillOpacity={0.6}
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                </>
+              ) : (
+                <Area
+                  type="monotone"
+                  dataKey={selectedAction}
+                  stroke="hsl(var(--primary))"
+                  fill="hsl(var(--primary))"
+                  fillOpacity={0.6}
+                />
+              )}
             </AreaChart>
           </ChartContainer>
           <p className="text-xs text-muted-foreground mt-2 text-center">
