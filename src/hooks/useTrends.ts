@@ -29,6 +29,7 @@ interface TrendsData {
   categoryShare: CategoryData[]
   medianGaps: MedianData[]
   dateRange?: { start: Date; end: Date } | null
+  givenReceivedRatio: number // Percentage of given moments
 }
 
 interface UseTrendsOptions {
@@ -127,11 +128,17 @@ export const useTrends = (options: UseTrendsOptions) => {
           median_days: parseFloat(row.median_days?.toString() || '0')
         })).filter(row => row.median_days > 0) // Filter out categories with no gaps
 
+        // Calculate Given vs Received ratio from the filtered dataset
+        const totalMoments = seriesDaily.reduce((sum, day) => sum + day.total, 0)
+        const givenMoments = seriesDaily.reduce((sum, day) => sum + day.given, 0)
+        const givenReceivedRatio = totalMoments > 0 ? (givenMoments / totalMoments) : 0
+
         return {
           seriesDaily,
           categoryShare,
           medianGaps,
-          dateRange: chartDateRange
+          dateRange: chartDateRange,
+          givenReceivedRatio
         }
       } catch (error) {
         console.error('Trends data error:', error)

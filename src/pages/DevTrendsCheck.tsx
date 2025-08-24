@@ -134,7 +134,7 @@ export const DevTrendsCheck: React.FC = () => {
 
         return {
           daily: { 
-            data: dailyResult.data?.slice(0, 5), 
+            data: dailyResult.data, // Get all data for debug row
             error: dailyResult.error 
           },
           category: { 
@@ -635,11 +635,11 @@ export const DevTrendsCheck: React.FC = () => {
                       </AlertDescription>
                     </Alert>
                   ) : (
-                    <div className="bg-muted/30 p-3 rounded text-xs">
-                      <pre className="whitespace-pre-wrap">
-                        {JSON.stringify(rpcResults?.daily.data, null, 2)}
-                      </pre>
-                    </div>
+                     <div className="bg-muted/30 p-3 rounded text-xs">
+                       <pre className="whitespace-pre-wrap">
+                         {JSON.stringify(rpcResults?.daily.data?.slice(0, 5), null, 2)}
+                       </pre>
+                     </div>
                   )}
                 </div>
 
@@ -720,6 +720,57 @@ export const DevTrendsCheck: React.FC = () => {
                   )}
                 </div>
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Raw Daily Data Debug Row */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Raw Daily Data (Debug)
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Raw daily counts for current filters - verify Jul 28 shows 1, Jul 29 shows 4
+            </p>
+          </CardHeader>
+          <CardContent>
+            {rpcLoading ? (
+              <Skeleton className="h-40 w-full" />
+            ) : rpcError ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Error loading daily data: {rpcError.message}
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="bg-muted/30 p-3 rounded text-xs max-h-60 overflow-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-1">Date</th>
+                      <th className="text-right py-1">Given</th>
+                      <th className="text-right py-1">Received</th>
+                      <th className="text-right py-1">Total</th>
+                    </tr>
+                  </thead>
+                   <tbody>
+                     {rpcResults?.daily.data?.map((row: any) => (
+                       <tr key={row.d} className="border-b border-border/30">
+                         <td className="py-1 font-mono">{row.d}</td>
+                         <td className="text-right py-1">{row.given}</td>
+                         <td className="text-right py-1">{row.received}</td>
+                         <td className="text-right py-1 font-semibold">{row.total}</td>
+                       </tr>
+                     ))}
+                   </tbody>
+                </table>
+                {(!rpcResults?.daily.data || rpcResults.daily.data.length === 0) && (
+                  <p className="text-center py-4 text-muted-foreground">No daily data found</p>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
