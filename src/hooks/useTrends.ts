@@ -60,8 +60,8 @@ export const useTrends = (options: UseTrendsOptions) => {
       const todayStr = format(today, 'yyyy-MM-dd')
 
       if (options.range === 'all') {
-        startDateStr = '1900-01-01'
-        endDateStr = todayStr
+        startDateStr = null
+        endDateStr = null
         
         // For "all" range, get the user's actual date bounds for chart domain
         const { data: rangeData, error: rangeError } = await supabase.rpc('get_user_moment_date_range', {
