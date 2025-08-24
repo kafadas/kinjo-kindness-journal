@@ -11,11 +11,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Progress } from '@/components/ui/progress'
 import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, AlertCircle, ChevronDown, Info, ArrowUp, ArrowDown, Minus, Activity, Target, Zap, Globe } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts'
 import { useTrends } from '@/hooks/useTrends'
 import { useWeeklyPatterns } from '@/hooks/useWeeklyPatterns'
 import { useMonthlyOverview } from '@/hooks/useMonthlyOverview'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -85,6 +85,7 @@ const getCategoryColor = (categoryId: string, index: number): string => {
 
 export const Trends: React.FC = () => {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const { urlState, setUrlState, clearFilters } = useTrendsUrlState()
   const { range: selectedRange, action: selectedAction, significant: significanceOnly } = urlState
@@ -444,18 +445,20 @@ export const Trends: React.FC = () => {
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig}>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={data.seriesDaily}>
-                <defs>
-                  <linearGradient id="fillGiven" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0.1}/>
-                  </linearGradient>
-                  <linearGradient id="fillReceived" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0.1}/>
-                  </linearGradient>
-                </defs>
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart 
+                data={data.seriesDaily}
+                onClick={(data) => {
+                  if (data?.activeLabel) {
+                    const dateParam = format(parseISO(data.activeLabel), 'yyyy-MM-dd')
+                    const params = new URLSearchParams(searchParams)
+                    params.set('date', dateParam)
+                    params.set('range', 'day')
+                    navigate(`/timeline?${params.toString()}`)
+                  }
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis 
                   dataKey="date" 
                   tickFormatter={(value) => format(parseISO(value), 'MMM d')}
@@ -464,33 +467,75 @@ export const Trends: React.FC = () => {
                 />
                 <YAxis fontSize={12} tickMargin={8} />
                 <ChartTooltip 
-                  content={<ChartTooltipContent 
-                    labelFormatter={(value) => format(parseISO(value), 'MMM d, yyyy')}
-                    formatter={(value, name) => [
-                      value,
-                      name === 'given' ? 'Given' : name === 'received' ? 'Received' : 'Total'
-                    ]}
-                  />}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || payload.length === 0) return null
+                    
+                    const date = format(parseISO(label), 'MMM d')
+                    const given = payload.find(p => p.dataKey === 'given')?.value || 0
+                    const received = payload.find(p => p.dataKey === 'received')?.value || 0
+                    const total = Number(given) + Number(received)
+                    
+                    return (
+                      <div className="bg-background border border-border rounded-lg shadow-md p-3">
+                        <p className="font-medium mb-2">{date}</p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-chart-1"></div>
+                            <span>Given: {given}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 rounded-full bg-chart-2"></div>
+                            <span>Received: {received}</span>
+                          </div>
+                          <div className="pt-1 border-t">
+                            <span>Total: {total}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }}
                 />
-                <Area
+                <Legend 
+                  content={({ payload }) => (
+                    <div className="flex justify-center gap-6 mt-4">
+                      {payload?.map((entry, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: entry.color }}
+                          ></div>
+                          <span className="text-sm text-muted-foreground">
+                            {entry.value === 'given' ? 'Kindness Given' : 'Kindness Received'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                />
+                <Line
                   type="monotone"
                   dataKey="given"
-                  stackId="1"
                   stroke="hsl(var(--chart-1))"
-                  fill="url(#fillGiven)"
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(var(--chart-1))', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: 'hsl(var(--chart-1))', strokeWidth: 2 }}
                   name="given"
                 />
-                <Area
+                <Line
                   type="monotone"
                   dataKey="received"
-                  stackId="1"
                   stroke="hsl(var(--chart-2))"
-                  fill="url(#fillReceived)"
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(var(--chart-2))', strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, stroke: 'hsl(var(--chart-2))', strokeWidth: 2 }}
                   name="received"
                 />
-              </AreaChart>
+              </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
+          <p className="text-xs text-muted-foreground text-center mt-2">
+            Charts respect the filters above (Action, Significant). Click any point to view moments from that day.
+          </p>
         </CardContent>
       </Card>
 
