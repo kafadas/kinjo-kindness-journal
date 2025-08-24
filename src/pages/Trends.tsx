@@ -33,7 +33,7 @@ const chartConfig = {
   },
   received: {
     label: 'Kindness Received', 
-    color: 'hsl(var(--muted-foreground))'
+    color: 'hsl(var(--accent))'
   },
   total: {
     label: 'Total Moments',
@@ -233,7 +233,8 @@ export const Trends: React.FC = () => {
   }
 
   const totalMoments = data.seriesDaily.reduce((sum, day) => sum + day.total, 0)
-  const givenPercentage = data.givenReceivedRatio
+  const givenMoments = data.seriesDaily.reduce((sum, day) => sum + day.given, 0)
+  const givenPercentage = totalMoments > 0 ? (givenMoments / totalMoments) : 0
 
   return (
     <div className="p-3 sm:p-6 max-w-6xl mx-auto w-full">
@@ -372,7 +373,7 @@ export const Trends: React.FC = () => {
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
-            <BarChart 
+            <AreaChart 
               data={data.seriesDaily}
               onClick={(event) => {
                 if (event?.activeLabel) {
@@ -387,8 +388,10 @@ export const Trends: React.FC = () => {
               />
               <YAxis 
                 fontSize={12} 
-                domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax + 1, 1))]}
-                allowDecimals={false}
+                domain={selectedAction === 'both' ? 
+                  [0, (dataMax: number) => Math.max(dataMax * 1.1, 1)] : // For stacked, use total
+                  [0, 'dataMax'] // For single series, use that series max
+                }
               />
               <ChartTooltip 
                 content={({ active, payload, label }) => {
@@ -398,9 +401,19 @@ export const Trends: React.FC = () => {
                       return (
                         <div className="bg-background border rounded-lg shadow-lg p-3">
                           <p className="font-medium">{format(parseISO(label as string), 'MMM d, yyyy')}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Given: {data.given}, Received: {data.received}, Total: {data.total}
-                          </p>
+                          {selectedAction === 'both' ? (
+                            <p className="text-sm text-muted-foreground">
+                              Given: {data.given}, Received: {data.received}, Total: {data.total}
+                            </p>
+                          ) : selectedAction === 'given' ? (
+                            <p className="text-sm text-muted-foreground">
+                              Given: {data.given}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Received: {data.received}
+                            </p>
+                          )}
                         </div>
                       );
                     }
@@ -408,26 +421,32 @@ export const Trends: React.FC = () => {
                   return null;
                 }}
               />
-              {/* Conditionally render bars based on selected action */}
+              {/* Conditionally render areas based on selected action */}
               {(selectedAction === 'both' || selectedAction === 'given') && (
-                <Bar
+                <Area
+                  type="monotone"
                   dataKey="given"
+                  stackId={selectedAction === 'both' ? "1" : undefined}
+                  stroke="hsl(var(--primary))"
                   fill="hsl(var(--primary))"
-                  radius={[2, 2, 0, 0]}
+                  fillOpacity={0.6}
                 />
               )}
-              {(selectedAction === 'both' || selectedAction === 'received') && (
-                <Bar
+               {(selectedAction === 'both' || selectedAction === 'received') && (
+                <Area
+                  type="monotone"
                   dataKey="received"
-                  fill="hsl(var(--muted-foreground))"
-                  radius={[2, 2, 0, 0]}
+                  stackId={selectedAction === 'both' ? "1" : undefined}
+                  stroke="hsl(var(--accent))"
+                  fill="hsl(var(--accent))"
+                  fillOpacity={0.6}
                 />
               )}
               <ChartLegend content={<ChartLegendContent />} />
-            </BarChart>
+            </AreaChart>
           </ChartContainer>
           <p className="text-xs text-muted-foreground mt-2 text-center">
-            Charts respect the filters above (Action, Significant). Click any bar to view moments from that day.
+            Charts respect the filters above (Action, Significant). Click any point to view moments from that day.
           </p>
         </CardContent>
       </Card>
