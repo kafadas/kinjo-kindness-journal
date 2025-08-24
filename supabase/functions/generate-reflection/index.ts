@@ -13,7 +13,23 @@ serve(async (req) => {
   }
 
   try {
-    const { range_start, range_end } = await req.json();
+    let range_start, range_end;
+    
+    // Handle JSON parsing safely
+    try {
+      const body = await req.json();
+      range_start = body.range_start;
+      range_end = body.range_end;
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError);
+      throw new Error('Invalid request body - expected JSON with range_start and range_end');
+    }
+
+    if (!range_start || !range_end) {
+      throw new Error('Missing required parameters: range_start and range_end');
+    }
+
+    console.log('Generating reflection for range:', { range_start, range_end });
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -39,7 +55,7 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .eq('range_start', range_start)
       .eq('range_end', range_end)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return new Response(JSON.stringify(existing), {
