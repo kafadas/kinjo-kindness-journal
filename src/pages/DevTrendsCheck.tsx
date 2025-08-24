@@ -99,7 +99,7 @@ export const DevTrendsCheck: React.FC = () => {
 
   // Test RPC functions with current filters
   const { data: rpcResults, isLoading: rpcLoading, error: rpcError } = useQuery({
-    queryKey: ['dev-rpc-test', user?.id, selectedRange, selectedAction, significanceOnly, profile?.timezone],
+    queryKey: ['dev-rpc-test', user?.id, selectedRange, selectedAction, significanceOnly],
     queryFn: async () => {
       if (!user?.id) return null
       
@@ -108,24 +108,20 @@ export const DevTrendsCheck: React.FC = () => {
       const endStr = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : null
 
       try {
-        const tz = profile?.timezone ?? 'UTC'
-
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
           supabase.rpc('daily_moment_counts', {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
             p_action: selectedAction,
-            p_significant_only: significanceOnly,
-            p_tz: tz
+            p_significant_only: significanceOnly
           }),
           supabase.rpc('category_share_delta', {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
             p_action: selectedAction,
-            p_significant_only: significanceOnly,
-            p_tz: tz
+            p_significant_only: significanceOnly
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,

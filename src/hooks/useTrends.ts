@@ -45,17 +45,8 @@ export const useTrends = (options: UseTrendsOptions) => {
     queryFn: async (): Promise<TrendsData> => {
       if (!user?.id) throw new Error('User not authenticated')
 
-      // Get user's timezone
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('timezone')
-        .eq('user_id', user.id)
-        .single()
-      
-      const tz = profile?.timezone ?? 'UTC'
-
-      // Calculate date range - for 'all' range, pass null to let DB handle it
-      const dateRange = options.range === 'all' ? null : getRange(options.range)
+      // Calculate date range using timezone-aware utility - null for "all"
+      const dateRange = getRange(options.range)
       
       let startDateStr: string | null = null
       let endDateStr: string | null = null
@@ -66,7 +57,7 @@ export const useTrends = (options: UseTrendsOptions) => {
       }
 
       try {
-        // For chart domain, get date bounds when needed
+        // For "all" range, get the user's date bounds for chart domain
         let chartDateRange: { start: Date; end: Date } | null = null
         if (options.range === 'all') {
           const { data: rangeData, error: rangeError } = await supabase.rpc('get_user_moment_date_range', {
@@ -93,7 +84,7 @@ export const useTrends = (options: UseTrendsOptions) => {
             p_end: endDateStr,
             p_action: options.action,
             p_significant_only: options.significance,
-            p_tz: tz
+            p_tz: 'UTC'
           }),
           supabase.rpc('category_share_delta', {
             p_user: user.id,
@@ -101,7 +92,7 @@ export const useTrends = (options: UseTrendsOptions) => {
             p_end: endDateStr,
             p_action: options.action,
             p_significant_only: options.significance,
-            p_tz: tz
+            p_tz: 'UTC'
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,
