@@ -29,6 +29,7 @@ interface TrendsData {
   categoryShare: CategoryData[]
   medianGaps: MedianData[]
   dateRange?: { start: Date; end: Date } | null
+  givenReceivedRatio: number // Percentage of given moments
 }
 
 interface UseTrendsOptions {
@@ -45,8 +46,17 @@ export const useTrends = (options: UseTrendsOptions) => {
     queryFn: async (): Promise<TrendsData> => {
       if (!user?.id) throw new Error('User not authenticated')
 
-      // Calculate date range using timezone-aware utility - null for "all"
-      const dateRange = getRange(options.range)
+      // Get user profile for timezone
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('timezone')
+        .eq('user_id', user.id)
+        .single()
+
+      const tz = profile?.timezone || 'UTC'
+
+      // Calculate date range - null for "all" to include entire history
+      const dateRange = options.range === 'all' ? null : getRange(options.range)
       
       let startDateStr: string | null = null
       let endDateStr: string | null = null
@@ -78,19 +88,21 @@ export const useTrends = (options: UseTrendsOptions) => {
 
         // Call the three RPC functions in parallel
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
-          supabase.rpc('daily_moment_counts', {
+          supabase.rpc('daily_moment_counts_v1', {
             p_user: user.id,
             p_start: startDateStr,
             p_end: endDateStr,
             p_action: options.action,
-            p_significant_only: options.significance
+            p_significant_only: options.significance,
+            p_tz: tz
           }),
-          supabase.rpc('category_share_delta', {
+          supabase.rpc('category_share_delta_v1', {
             p_user: user.id,
             p_start: startDateStr,
             p_end: endDateStr,
             p_action: options.action,
-            p_significant_only: options.significance
+            p_significant_only: options.significance,
+            p_tz: tz
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,
@@ -110,15 +122,15 @@ export const useTrends = (options: UseTrendsOptions) => {
         const seriesDaily: DailyData[] = (dailyResult.data || []).map(row => ({
           date: row.d,
           total: row.total,
-          given: row.given,
-          received: row.received
+          given: row.given_count,
+          received: row.received_count
         }))
 
         const categoryShare: CategoryData[] = (categoryResult.data || []).map(row => ({
           category_id: row.category_id,
-          name: row.name,
-          pct: parseFloat(row.pct.toString()) * 100, // Convert to percentage
-          delta_pct: parseFloat(row.delta_pct.toString()) * 100
+          name: row.category_name,
+          pct: parseFloat(row.pct.toString()), // Already in percentage format
+          delta_pct: 0 // v1 function doesn't include delta, set to 0 for now
         }))
 
         const medianGaps: MedianData[] = (medianResult.data || []).map(row => ({
@@ -127,11 +139,17 @@ export const useTrends = (options: UseTrendsOptions) => {
           median_days: parseFloat(row.median_days?.toString() || '0')
         })).filter(row => row.median_days > 0) // Filter out categories with no gaps
 
+        // Calculate Given vs Received ratio from the filtered dataset
+        const totalMoments = seriesDaily.reduce((sum, day) => sum + day.total, 0)
+        const givenMoments = seriesDaily.reduce((sum, day) => sum + day.given, 0)
+        const givenReceivedRatio = totalMoments > 0 ? (givenMoments / totalMoments) : 0
+
         return {
           seriesDaily,
           categoryShare,
           medianGaps,
-          dateRange: chartDateRange
+          dateRange: chartDateRange,
+          givenReceivedRatio
         }
       } catch (error) {
         console.error('Trends data error:', error)

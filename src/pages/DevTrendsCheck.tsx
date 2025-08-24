@@ -107,21 +107,25 @@ export const DevTrendsCheck: React.FC = () => {
       const startStr = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : null
       const endStr = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : null
 
+      const tz = profile?.timezone ?? 'UTC'
+
       try {
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
-          supabase.rpc('daily_moment_counts', {
+          supabase.rpc('daily_moment_counts_v1', {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
             p_action: selectedAction,
-            p_significant_only: significanceOnly
+            p_significant_only: significanceOnly,
+            p_tz: tz
           }),
-          supabase.rpc('category_share_delta', {
+          supabase.rpc('category_share_delta_v1', {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
             p_action: selectedAction,
-            p_significant_only: significanceOnly
+            p_significant_only: significanceOnly,
+            p_tz: tz
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,
@@ -134,15 +138,14 @@ export const DevTrendsCheck: React.FC = () => {
 
         return {
           daily: { 
-            data: dailyResult.data?.slice(0, 5), 
+            data: dailyResult.data, // Get all data for debug row
             error: dailyResult.error 
           },
           category: { 
             data: categoryResult.data?.slice(0, 5)?.map(row => ({
               ...row,
-              pct: row.pct ? parseFloat(row.pct.toString()) : row.pct,
-              delta_pct: row.delta_pct ? parseFloat(row.delta_pct.toString()) : row.delta_pct
-            })), 
+              pct: row.pct ? parseFloat(row.pct.toString()) : row.pct
+            })),
             error: categoryResult.error 
           },
           median: { 
@@ -170,14 +173,17 @@ export const DevTrendsCheck: React.FC = () => {
       const startStr = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : null
       const endStr = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : null
 
+      const tz = profile?.timezone ?? 'UTC'
+
       try {
         // Get trends data (from RPC)
-        const dailyResult = await supabase.rpc('daily_moment_counts', {
+        const dailyResult = await supabase.rpc('daily_moment_counts_v1', {
           p_user: user.id,
           p_start: startStr,
           p_end: endStr,
           p_action: selectedAction,
-          p_significant_only: significanceOnly
+          p_significant_only: significanceOnly,
+          p_tz: tz
         })
 
         if (dailyResult.error) throw dailyResult.error
@@ -588,7 +594,7 @@ export const DevTrendsCheck: React.FC = () => {
           <CardContent className="space-y-6">
             {rpcLoading ? (
               <div className="space-y-4">
-                {['daily_moment_counts', 'category_share_delta', 'median_gap_by_category'].map((name) => (
+                {['daily_moment_counts_v1', 'category_share_delta_v1', 'median_gap_by_category'].map((name) => (
                   <div key={name}>
                     <Skeleton className="h-6 w-48 mb-2" />
                     <Skeleton className="h-20 w-full" />
@@ -615,7 +621,7 @@ export const DevTrendsCheck: React.FC = () => {
                 {/* Daily Counts */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge>daily_moment_counts</Badge>
+                    <Badge>daily_moment_counts_v1</Badge>
                     {rpcResults?.daily.error ? (
                       <Badge variant="destructive">
                         Error: {rpcResults.daily.error.code || 'Unknown'} 
@@ -635,18 +641,18 @@ export const DevTrendsCheck: React.FC = () => {
                       </AlertDescription>
                     </Alert>
                   ) : (
-                    <div className="bg-muted/30 p-3 rounded text-xs">
-                      <pre className="whitespace-pre-wrap">
-                        {JSON.stringify(rpcResults?.daily.data, null, 2)}
-                      </pre>
-                    </div>
+                     <div className="bg-muted/30 p-3 rounded text-xs">
+                       <pre className="whitespace-pre-wrap">
+                         {JSON.stringify(rpcResults?.daily.data?.slice(0, 5), null, 2)}
+                       </pre>
+                     </div>
                   )}
                 </div>
 
                 {/* Category Share */}
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge>category_share_delta</Badge>
+                    <Badge>category_share_delta_v1</Badge>
                     {rpcResults?.category.error ? (
                       <Badge variant="destructive">
                         Error: {rpcResults.category.error.code || 'Unknown'}
@@ -668,15 +674,14 @@ export const DevTrendsCheck: React.FC = () => {
                   ) : (
                     <div className="bg-muted/30 p-3 rounded text-xs">
                       <pre className="whitespace-pre-wrap">
-                        {JSON.stringify(
-                          rpcResults?.category.data?.map(row => ({
-                            ...row,
-                            pct_formatted: row.pct ? formatPct1(row.pct) : 'N/A',
-                            delta_formatted: row.delta_pct ? formatDelta(row.delta_pct) : 'N/A'
-                          })), 
-                          null, 
-                          2
-                        )}
+                         {JSON.stringify(
+                           rpcResults?.category.data?.map(row => ({
+                             ...row,
+                             pct_formatted: row.pct ? formatPct1(row.pct) : 'N/A'
+                           })), 
+                           null, 
+                           2
+                         )}
                       </pre>
                     </div>
                   )}
@@ -720,6 +725,57 @@ export const DevTrendsCheck: React.FC = () => {
                   )}
                 </div>
               </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Raw Daily Data Debug Row */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Raw Daily Data (Debug)
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Raw daily counts for current filters - verify Jul 28 shows 1, Jul 29 shows 4
+            </p>
+          </CardHeader>
+          <CardContent>
+            {rpcLoading ? (
+              <Skeleton className="h-40 w-full" />
+            ) : rpcError ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Error loading daily data: {rpcError.message}
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="bg-muted/30 p-3 rounded text-xs max-h-60 overflow-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-1">Date</th>
+                      <th className="text-right py-1">Given</th>
+                      <th className="text-right py-1">Received</th>
+                      <th className="text-right py-1">Total</th>
+                    </tr>
+                  </thead>
+                   <tbody>
+                     {rpcResults?.daily.data?.map((row: any) => (
+                       <tr key={row.d} className="border-b border-border/30">
+                         <td className="py-1 font-mono">{row.d}</td>
+                         <td className="text-right py-1">{row.given}</td>
+                         <td className="text-right py-1">{row.received}</td>
+                         <td className="text-right py-1 font-semibold">{row.total}</td>
+                       </tr>
+                     ))}
+                   </tbody>
+                </table>
+                {(!rpcResults?.daily.data || rpcResults.daily.data.length === 0) && (
+                  <p className="text-center py-4 text-muted-foreground">No daily data found</p>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
