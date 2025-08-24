@@ -160,14 +160,6 @@ export const Preferences: React.FC = () => {
                 <Settings className="h-4 w-4 mr-2" />
                 Advanced Privacy Settings
               </Button>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Button variant="outline" size="sm">
-                  Export My Data
-                </Button>
-                <Button variant="outline" size="sm">
-                  Download Archive
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>

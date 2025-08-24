@@ -58,9 +58,10 @@ export const DeleteDataModal = ({ open, onOpenChange, deleteType }: DeleteDataMo
         toast.success('Account deleted successfully')
         onOpenChange(false)
         
-        // Redirect to login page
+        // Clear session and redirect to landing page
+        await supabase.auth.signOut()
         setTimeout(() => {
-          window.location.href = '/login'
+          window.location.href = '/'
         }, 1000)
       }
     } catch (error: any) {
@@ -131,7 +132,7 @@ export const DeleteDataModal = ({ open, onOpenChange, deleteType }: DeleteDataMo
             <Alert className="border-destructive/20 bg-destructive/5">
               <AlertTriangle className="h-4 w-4 text-destructive" />
               <AlertDescription className="text-destructive">
-                Account deletion will log you out and redirect you to the login page.
+                Account deletion will log you out and redirect you to the Kinjo landing page.
                 You will lose access to all your Kinjo data immediately.
               </AlertDescription>
             </Alert>
