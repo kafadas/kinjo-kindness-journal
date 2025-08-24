@@ -431,6 +431,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _action_from_text: {
+        Args: { p_action: string }
+        Returns: Database["public"]["Enums"]["action_t"]
+      }
       auth_uid: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -449,20 +453,19 @@ export type Database = {
           name: string
         }[]
       }
-      category_share_delta: {
+      category_share_delta_v1: {
         Args: {
-          p_action?: string
+          p_action: string
           p_end: string
-          p_significant_only?: boolean
+          p_significant_only: boolean
           p_start: string
-          p_tz?: string
+          p_tz: string
           p_user: string
         }
         Returns: {
           category_id: string
+          category_name: string
           cnt: number
-          delta_pct: number
-          name: string
           pct: number
         }[]
       }
@@ -484,19 +487,19 @@ export type Database = {
         }
         Returns: string
       }
-      daily_moment_counts: {
+      daily_moment_counts_v1: {
         Args: {
           p_action: string
           p_end: string
           p_significant_only: boolean
           p_start: string
-          p_tz?: string
+          p_tz: string
           p_user: string
         }
         Returns: {
-          day: string
-          given: number
-          received: number
+          d: string
+          given_count: number
+          received_count: number
           total: number
         }[]
       }
