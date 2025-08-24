@@ -1,17 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { Shield, Download, Trash2, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Shield, Download, Trash2, AlertTriangle, ArrowLeft, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
+import { ExportDataModal } from '@/components/modals/ExportDataModal';
+import { DeleteDataModal } from '@/components/modals/DeleteDataModal';
 
 export const Privacy: React.FC = () => {
   const navigate = useNavigate();
   const { isDiscreetMode, toggleDiscreetMode } = useDiscreetMode();
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteType, setDeleteType] = useState<'moments' | 'account'>('moments');
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -79,23 +84,35 @@ export const Privacy: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Download a copy of all your Kinjo data including entries, people, categories, and reflections.
+              Download a complete copy of all your Kinjo data in your preferred format.
             </p>
             
             <div className="grid md:grid-cols-2 gap-3">
-              <Button variant="outline" className="justify-start">
-                <Download className="h-4 w-4 mr-2" />
-                Export as JSON
-              </Button>
-              <Button variant="outline" className="justify-start">
+              <Button 
+                variant="outline" 
+                className="justify-start"
+                onClick={() => setExportModalOpen(true)}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Export as CSV
               </Button>
+              <Button 
+                variant="outline" 
+                className="justify-start"
+                onClick={() => setExportModalOpen(true)}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Export as PDF
+              </Button>
             </div>
             
-            <p className="text-xs text-muted-foreground">
-              Export includes all your data in a portable format. Exported files are encrypted for your security.
-            </p>
+            <Alert>
+              <Shield className="h-4 w-4" />
+              <AlertDescription>
+                Exports are generated securely and include all your moments, people, categories, and groups. 
+                CSV files are ideal for data analysis, while PDF provides a formatted summary.
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
 
@@ -145,13 +162,20 @@ export const Privacy: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 border border-destructive/20 rounded-lg">
                 <div className="space-y-1">
-                  <Label className="text-base font-medium">Clear All Entries</Label>
+                  <Label className="text-base font-medium">Clear All Moments</Label>
                   <p className="text-sm text-muted-foreground">
-                    Permanently delete all your kindness entries while keeping people and categories
+                    Permanently delete all your kindness moments while keeping people and categories
                   </p>
                 </div>
-                <Button variant="destructive" size="sm">
-                  Clear Entries
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => {
+                    setDeleteType('moments')
+                    setDeleteModalOpen(true)
+                  }}
+                >
+                  Clear Moments
                 </Button>
               </div>
               
@@ -162,7 +186,14 @@ export const Privacy: React.FC = () => {
                     Permanently delete your account and all associated data
                   </p>
                 </div>
-                <Button variant="destructive" size="sm">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => {
+                    setDeleteType('account')
+                    setDeleteModalOpen(true)
+                  }}
+                >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Account
                 </Button>
@@ -178,6 +209,17 @@ export const Privacy: React.FC = () => {
             Back to Preferences
           </Button>
         </div>
+
+        {/* Modals */}
+        <ExportDataModal 
+          open={exportModalOpen} 
+          onOpenChange={setExportModalOpen} 
+        />
+        <DeleteDataModal 
+          open={deleteModalOpen} 
+          onOpenChange={setDeleteModalOpen}
+          deleteType={deleteType}
+        />
       </div>
     </div>
   );
