@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -6,17 +6,156 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Settings, User, Bell, Palette, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useSettings } from '@/hooks/useSettings';
+import { getProfile, updateProfile, updateSettings } from '@/lib/db';
+import { toast } from 'sonner';
+import type { Profile } from '@/lib/db/types';
+
+interface FormData {
+  displayName: string;
+  timezone: string;
+  theme: 'system' | 'light' | 'dark';
+  fontSize: 'small' | 'medium' | 'large';
+  discreetMode: boolean;
+  dailyReflection: boolean;
+  weeklyReflection: boolean;
+  milestones: boolean;
+}
+
+const DEFAULT_FORM_DATA: FormData = {
+  displayName: '',
+  timezone: 'UTC',
+  theme: 'system',
+  fontSize: 'medium',
+  discreetMode: false,
+  dailyReflection: true,
+  weeklyReflection: true,
+  milestones: true,
+};
 
 export const Preferences: React.FC = () => {
   const navigate = useNavigate();
   const { isDiscreetMode, toggleDiscreetMode } = useDiscreetMode();
   const { session } = useAuth();
+  const { settings, loading: settingsLoading } = useSettings();
+  
+  const [formData, setFormData] = useState<FormData>(DEFAULT_FORM_DATA);
+  const [initialData, setInitialData] = useState<FormData>(DEFAULT_FORM_DATA);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  // Check if form has unsaved changes
+  const hasUnsavedChanges = JSON.stringify(formData) !== JSON.stringify(initialData);
+
+  // Load initial data
+  useEffect(() => {
+    const loadData = async () => {
+      if (!session?.user?.id) return;
+      
+      try {
+        const profileData = await getProfile();
+        setProfile(profileData);
+        
+        const initialFormData: FormData = {
+          displayName: profileData?.display_name || '',
+          timezone: profileData?.timezone || 'UTC',
+          theme: 'system', // Will be enhanced later with actual theme setting
+          fontSize: 'medium', // Will be enhanced later
+          discreetMode: settings?.discreet_mode || false,
+          dailyReflection: true, // Will be enhanced later with actual settings
+          weeklyReflection: settings?.weekly_digest || true,
+          milestones: true, // Will be enhanced later
+        };
+        
+        setFormData(initialFormData);
+        setInitialData(initialFormData);
+      } catch (error) {
+        console.error('Error loading preferences:', error);
+        toast.error('Failed to load preferences');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (!settingsLoading) {
+      loadData();
+    }
+  }, [session?.user?.id, settings, settingsLoading]);
+
+  // Update form field
+  const updateField = (field: keyof FormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Save changes
+  const handleSave = async () => {
+    if (!session?.user?.id || !hasUnsavedChanges) return;
+    
+    setSaving(true);
+    try {
+      // Update profile data
+      if (formData.displayName !== initialData.displayName || formData.timezone !== initialData.timezone) {
+        await updateProfile({
+          display_name: formData.displayName,
+          timezone: formData.timezone,
+        });
+      }
+      
+      // Update settings data
+      if (formData.discreetMode !== initialData.discreetMode || formData.weeklyReflection !== initialData.weeklyReflection) {
+        await updateSettings({
+          discreet_mode: formData.discreetMode,
+          weekly_digest: formData.weeklyReflection,
+        });
+      }
+      
+      // Update discreet mode context if changed
+      if (formData.discreetMode !== isDiscreetMode) {
+        toggleDiscreetMode();
+      }
+      
+      setInitialData(formData);
+      toast.success('Preferences saved');
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+      toast.error('Failed to save preferences');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Reset to defaults
+  const handleReset = () => {
+    setFormData({
+      ...DEFAULT_FORM_DATA,
+      displayName: profile?.display_name || '',
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="p-6 max-w-4xl mx-auto">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="h-4 bg-muted rounded w-1/2"></div>
+          <div className="space-y-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-32 bg-muted rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
+    <TooltipProvider>
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-semibold mb-2">
@@ -51,11 +190,16 @@ export const Preferences: React.FC = () => {
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Display Name</Label>
-                  <Input id="displayName" placeholder="How should we address you?" />
+                  <Input 
+                    id="displayName" 
+                    placeholder="How should we address you?" 
+                    value={formData.displayName}
+                    onChange={(e) => updateField('displayName', e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="timezone">Timezone</Label>
-                  <Select defaultValue="Asia/Dubai">
+                  <Select value={formData.timezone} onValueChange={(value) => updateField('timezone', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select timezone" />
                     </SelectTrigger>
@@ -144,8 +288,8 @@ export const Preferences: React.FC = () => {
               </div>
               <Switch
                 id="discreet-mode"
-                checked={isDiscreetMode}
-                onCheckedChange={toggleDiscreetMode}
+                checked={formData.discreetMode}
+                onCheckedChange={(checked) => updateField('discreetMode', checked)}
               />
             </div>
             
@@ -180,7 +324,10 @@ export const Preferences: React.FC = () => {
                   Gentle reminders to capture your daily moments of kindness
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={formData.dailyReflection}
+                onCheckedChange={(checked) => updateField('dailyReflection', checked)}
+              />
             </div>
             
             <div className="flex items-center justify-between">
@@ -190,7 +337,10 @@ export const Preferences: React.FC = () => {
                   Weekly prompt to reflect on your kindness journey
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={formData.weeklyReflection}
+                onCheckedChange={(checked) => updateField('weeklyReflection', checked)}
+              />
             </div>
             
             <div className="flex items-center justify-between">
@@ -200,7 +350,10 @@ export const Preferences: React.FC = () => {
                   Celebrate your kindness milestones and streaks
                 </p>
               </div>
-              <Switch defaultChecked />
+              <Switch 
+                checked={formData.milestones}
+                onCheckedChange={(checked) => updateField('milestones', checked)}
+              />
             </div>
           </CardContent>
         </Card>
@@ -216,7 +369,7 @@ export const Preferences: React.FC = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Theme</Label>
-              <Select>
+              <Select value={formData.theme} onValueChange={(value: 'system' | 'light' | 'dark') => updateField('theme', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose theme" />
                 </SelectTrigger>
@@ -230,7 +383,7 @@ export const Preferences: React.FC = () => {
             
             <div className="space-y-2">
               <Label>Font Size</Label>
-              <Select>
+              <Select value={formData.fontSize} onValueChange={(value: 'small' | 'medium' | 'large') => updateField('fontSize', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select font size" />
                 </SelectTrigger>
@@ -246,14 +399,30 @@ export const Preferences: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <Button variant="outline">
-            Reset to Defaults
-          </Button>
-          <Button>
-            Save Changes
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                onClick={handleReset}
+                disabled={saving}
+              >
+                Reset to Defaults
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Restores defaults (you still need to save)
+            </TooltipContent>
+          </Tooltip>
+          
+          <Button 
+            onClick={handleSave}
+            disabled={!hasUnsavedChanges || saving}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
