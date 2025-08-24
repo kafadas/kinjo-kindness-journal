@@ -181,6 +181,7 @@ export const Timeline: React.FC = () => {
   const filterSummary = useMemo(() => {
     const parts = [];
     
+    // Date range or "All time"
     if (appliedFilters.dateRange) {
       const { from, to } = appliedFilters.dateRange;
       if (format(from, 'yyyy-MM-dd') === format(startOfDay(to), 'yyyy-MM-dd')) {
@@ -188,28 +189,35 @@ export const Timeline: React.FC = () => {
       } else {
         parts.push(`${format(from, 'MMM d')} - ${format(startOfDay(to), 'MMM d')}`);
       }
+    } else {
+      parts.push('All time');
     }
     
+    // Action type (only if not "both"/default)
     if (appliedFilters.action) {
       parts.push(appliedFilters.action === 'given' ? 'Given' : 'Received');
     }
     
-    if (appliedFilters.significance) {
-      parts.push('Significant');
-    }
-    
-    if (appliedFilters.search) {
-      parts.push(`q: ${appliedFilters.search}`);
-    }
-    
+    // Category (only if not "all"/default)
     if (appliedFilters.categoryId) {
       const category = categories.find(c => c.id === appliedFilters.categoryId);
       if (category) parts.push(`Category: ${category.name}`);
     }
     
+    // Person (only if selected)
     if (appliedFilters.personId) {
       const person = people.find(p => p.id === appliedFilters.personId);
       if (person) parts.push(`Person: ${person.display_name}`);
+    }
+    
+    // Significance (only if enabled)
+    if (appliedFilters.significance) {
+      parts.push('Significant');
+    }
+    
+    // Search query (only if present)
+    if (appliedFilters.search) {
+      parts.push(`q: ${appliedFilters.search}`);
     }
     
     return parts.join(' • ');

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Switch } from '@/components/ui/switch'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { X, Calendar as CalendarIcon, Filter, ChevronDown, ChevronUp } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -177,40 +178,44 @@ export const TimelineFiltersComponent = ({
           {/* Action Type */}
           <div>
             <Label>Action Type</Label>
-            <Select 
-              value={filters.action || 'all'} 
-              onValueChange={(value) => updateFilter('action', value === 'all' ? undefined : value as 'given' | 'received')}
+            <ToggleGroup 
+              type="single" 
+              value={filters.action || 'both'} 
+              onValueChange={(value) => updateFilter('action', value === 'both' ? undefined : value as 'given' | 'received')}
+              className="justify-start"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="All actions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Actions</SelectItem>
-                <SelectItem value="given">Given</SelectItem>
-                <SelectItem value="received">Received</SelectItem>
-              </SelectContent>
-            </Select>
+              <ToggleGroupItem value="both" variant="outline" size="sm">
+                Both
+              </ToggleGroupItem>
+              <ToggleGroupItem value="given" variant="outline" size="sm">
+                Given
+              </ToggleGroupItem>
+              <ToggleGroupItem value="received" variant="outline" size="sm">
+                Received
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
 
           {/* Category */}
           <div>
             <Label>Category</Label>
-            <Select 
-              value={filters.categoryId || 'all'} 
-              onValueChange={(value) => updateFilter('categoryId', value === 'all' ? undefined : value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="All categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+            <div className="overflow-x-auto">
+              <ToggleGroup 
+                type="single" 
+                value={filters.categoryId || 'all'} 
+                onValueChange={(value) => updateFilter('categoryId', value === 'all' ? undefined : value)}
+                className="justify-start flex-nowrap min-w-max"
+              >
+                <ToggleGroupItem value="all" variant="outline" size="sm">
+                  All
+                </ToggleGroupItem>
                 {categories.map(category => (
-                  <SelectItem key={category.id} value={category.id}>
+                  <ToggleGroupItem key={category.id} value={category.id} variant="outline" size="sm">
                     {category.name}
-                  </SelectItem>
+                  </ToggleGroupItem>
                 ))}
-              </SelectContent>
-            </Select>
+              </ToggleGroup>
+            </div>
           </div>
 
           {/* Person */}
