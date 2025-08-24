@@ -33,7 +33,7 @@ const chartConfig = {
   },
   received: {
     label: 'Kindness Received', 
-    color: 'hsl(var(--secondary))'
+    color: 'hsl(var(--accent))'
   },
   total: {
     label: 'Total Moments',
@@ -432,13 +432,13 @@ export const Trends: React.FC = () => {
                   fillOpacity={0.6}
                 />
               )}
-              {(selectedAction === 'both' || selectedAction === 'received') && (
+               {(selectedAction === 'both' || selectedAction === 'received') && (
                 <Area
                   type="monotone"
                   dataKey="received"
                   stackId={selectedAction === 'both' ? "1" : undefined}
-                  stroke="hsl(var(--secondary))"
-                  fill="hsl(var(--secondary))"
+                  stroke="hsl(var(--accent))"
+                  fill="hsl(var(--accent))"
                   fillOpacity={0.6}
                 />
               )}
