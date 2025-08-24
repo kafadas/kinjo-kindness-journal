@@ -172,11 +172,10 @@ export const DevTrendsCheck: React.FC = () => {
   }
 
   const handleOpenTrends = () => {
-    const params = new URLSearchParams({
-      range: selectedRange,
-      action: selectedAction,
-      significant: significanceOnly.toString()
-    })
+    const params = new URLSearchParams()
+    if (selectedRange !== '30d') params.set('range', selectedRange)
+    if (selectedAction !== 'both') params.set('action', selectedAction)
+    if (significanceOnly) params.set('significant', '1')
     navigate(`/trends?${params.toString()}`)
   }
 
@@ -250,6 +249,26 @@ export const DevTrendsCheck: React.FC = () => {
           <span className="hidden sm:inline">Significant Only</span>
           <span className="sm:hidden">Significant</span>
         </Button>
+
+        {/* Clear Filters */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setSelectedRange('30d')
+            setSelectedAction('both')
+            setSignificanceOnly(false)
+          }}
+          disabled={selectedRange === '30d' && selectedAction === 'both' && !significanceOnly}
+          className={cn(
+            "text-xs sm:text-sm px-2 sm:px-3",
+            selectedRange !== '30d' || selectedAction !== 'both' || significanceOnly
+              ? "text-muted-foreground hover:text-foreground" 
+              : "text-muted-foreground/50 cursor-not-allowed"
+          )}
+        >
+          Clear filters
+        </Button>
       </div>
 
       {/* Action Buttons */}
@@ -274,21 +293,38 @@ export const DevTrendsCheck: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              User Information
+              User Information & SQL Preview
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">User ID</Badge>
-              <code className="text-sm bg-muted px-2 py-1 rounded">{user.id}</code>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">User ID</Badge>
+                <code className="text-sm bg-muted px-2 py-1 rounded">{user.id}</code>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">Email</Badge>
+                <span className="text-sm">{user.email}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">Timezone</Badge>
+                <span className="text-sm">{profile?.timezone || 'UTC'}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">Email</Badge>
-              <span className="text-sm">{user.email}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">Timezone</Badge>
-              <span className="text-sm">{profile?.timezone || 'UTC'}</span>
+            
+            <div className="pt-2 border-t">
+              <div className="mb-2">
+                <Badge variant="outline">SQL WHERE clause preview</Badge>
+              </div>
+              <code className="text-xs bg-muted p-3 rounded block">
+                WHERE user_id = '{user.id}'
+                {(() => {
+                  const { start, end } = getRange(selectedRange)
+                  return ` AND happened_at::date BETWEEN '${format(start, 'yyyy-MM-dd')}' AND '${format(end, 'yyyy-MM-dd')}'`
+                })()}
+                {selectedAction !== 'both' && ` AND action = '${selectedAction}'`}
+                {significanceOnly && ` AND significance = true`}
+              </code>
             </div>
           </CardContent>
         </Card>

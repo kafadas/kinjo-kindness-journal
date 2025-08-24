@@ -8,7 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, RefreshCw, AlertCircle, ChevronDown } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, RefreshCw, AlertCircle, ChevronDown, Info } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import { useTrends } from '@/hooks/useTrends'
 import { useNavigate } from 'react-router-dom'
@@ -18,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { RANGE_OPTIONS, type DateRangeLabel } from '@/lib/dateRange'
 import { formatPct1, formatNum, formatDelta } from '@/lib/formatters'
+import { useTrendsUrlState } from '@/hooks/useTrendsUrlState'
 
 const ACTION_OPTIONS = [
   { label: 'Both', value: 'both' },
@@ -57,9 +59,8 @@ export const Trends: React.FC = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
-  const [selectedRange, setSelectedRange] = useState<DateRangeLabel>('90d')
-  const [selectedAction, setSelectedAction] = useState<'given' | 'received' | 'both'>('both')
-  const [significanceOnly, setSignificanceOnly] = useState(false)
+  const { urlState, setUrlState, clearFilters } = useTrendsUrlState()
+  const { range: selectedRange, action: selectedAction, significant: significanceOnly } = urlState
 
   const { data, isLoading, isError, error, refetch } = useTrends({
     range: selectedRange,
@@ -80,8 +81,7 @@ export const Trends: React.FC = () => {
   }
 
   const handleClearFilters = () => {
-    setSelectedAction('both')
-    setSignificanceOnly(false)
+    clearFilters()
     // Trigger refetch after state updates
     setTimeout(() => {
       queryClient.invalidateQueries({ queryKey: ['trends', user?.id] })
@@ -92,20 +92,19 @@ export const Trends: React.FC = () => {
   const hasActiveFilters = selectedAction !== 'both' || significanceOnly
 
   const handleCategoryClick = (categoryId: string) => {
-    const params = new URLSearchParams({
-      range: selectedRange,
-      action: selectedAction,
-      significant: significanceOnly.toString()
-    })
+    const params = new URLSearchParams()
+    if (selectedRange !== '30d') params.set('range', selectedRange)
+    if (selectedAction !== 'both') params.set('action', selectedAction)
+    if (significanceOnly) params.set('significant', '1')
     navigate(`/categories/${categoryId}?${params.toString()}`)
   }
 
   const handleTimelineClick = (date: string) => {
     const params = new URLSearchParams({
-      start: date,
-      end: date,
+      date: date,
+      range: 'day',
       action: selectedAction,
-      significant: significanceOnly.toString()
+      significant: significanceOnly ? '1' : '0'
     })
     navigate(`/timeline?${params.toString()}`)
   }
@@ -304,7 +303,7 @@ export const Trends: React.FC = () => {
               key={option.label}
               variant={selectedRange === option.label ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedRange(option.label)}
+              onClick={() => setUrlState({ range: option.label })}
               className="text-xs sm:text-sm px-2 sm:px-3"
             >
               {option.display}
@@ -319,7 +318,7 @@ export const Trends: React.FC = () => {
               key={option.value}
               variant={selectedAction === option.value ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setSelectedAction(option.value as any)}
+              onClick={() => setUrlState({ action: option.value as any })}
               className="text-xs sm:text-sm px-2 sm:px-3"
             >
               {option.label}
@@ -331,7 +330,7 @@ export const Trends: React.FC = () => {
         <Button
           variant={significanceOnly ? 'default' : 'outline'}
           size="sm"
-          onClick={() => setSignificanceOnly(!significanceOnly)}
+          onClick={() => setUrlState({ significant: !significanceOnly })}
           className="text-xs sm:text-sm px-2 sm:px-3 min-w-0"
         >
           <Filter className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -488,38 +487,56 @@ export const Trends: React.FC = () => {
         {/* Category Breakdown */}
         <Card>
           <CardHeader>
-            <CardTitle>Category Breakdown</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Category Breakdown
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground">
+                      <Info className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">Share is calculated within the selected time range and filters.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardTitle>
             <p className="text-xs text-muted-foreground">Share of moments in selected range</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {data.categoryShare.slice(0, 8).map((category, index) => (
-                <div 
-                  key={category.category_id} 
-                  className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded transition-colors"
-                  onClick={() => handleCategoryClick(category.category_id)}
-                >
+              {data.categoryShare.slice(0, 8).map((category, index) => {
+                // Calculate absolute count from percentage and total moments
+                const absoluteCount = Math.round((category.pct / 100) * totalMoments)
+                return (
                   <div 
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                      <span className="truncate">{category.name} — {formatPct1(category.pct / 100)}</span>
-                      {category.delta_pct !== 0 && (
-                        <span 
-                          className={cn(
-                            "text-xs flex-shrink-0",
-                            category.delta_pct > 0 ? "text-green-600" : "text-red-600"
-                          )}
-                        >
-                          ({formatDelta(category.delta_pct / 100)} vs prev window)
-                        </span>
-                      )}
+                    key={category.category_id} 
+                    className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 p-2 rounded transition-colors"
+                    onClick={() => handleCategoryClick(category.category_id)}
+                  >
+                    <div 
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                        <span className="truncate">{category.name} — {absoluteCount} ({formatPct1(category.pct / 100)})</span>
+                        {category.delta_pct !== 0 && (
+                          <span 
+                            className={cn(
+                              "text-xs flex-shrink-0",
+                              category.delta_pct > 0 ? "text-green-600" : "text-red-600"
+                            )}
+                          >
+                            ({formatDelta(category.delta_pct / 100)} vs prev window)
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>
