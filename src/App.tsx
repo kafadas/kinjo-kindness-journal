@@ -43,6 +43,10 @@ const DevTrendsCheck = lazy(() =>
   import("./pages/DevTrendsCheck").then(module => ({ default: module.DevTrendsCheck }))
 );
 
+const DevTrendsAudit = lazy(() =>
+  import("./pages/DevTrendsAudit").then(module => ({ default: module.default }))
+);
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -86,6 +90,16 @@ const App = () => (
                     <AppLayout>
                       <Suspense fallback={<div className="p-6">Loading dev tools...</div>}>
                         <DevTrendsCheck />
+                      </Suspense>
+                    </AppLayout>
+                  } 
+                />
+                <Route 
+                  path="/dev/trends-audit" 
+                  element={
+                    <AppLayout>
+                      <Suspense fallback={<div className="p-6">Loading dev tools...</div>}>
+                        <DevTrendsAudit />
                       </Suspense>
                     </AppLayout>
                   } 
