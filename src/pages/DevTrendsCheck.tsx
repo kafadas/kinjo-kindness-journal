@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { RefreshCw, ExternalLink, Database, User, Calendar, BarChart3, AlertCircle, CheckCircle, Filter } from 'lucide-react'
+import { RefreshCw, ExternalLink, Database, User, Calendar, BarChart3, AlertCircle, CheckCircle, Filter, Activity } from 'lucide-react'
 import { RANGE_OPTIONS, type DateRangeLabel, getRange } from '@/lib/dateRange'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -160,11 +160,118 @@ export const DevTrendsCheck: React.FC = () => {
     enabled: !!user?.id
   })
 
+  // Chart Parity Check - Compare trends data vs timeline data
+  const { data: parityResults, isLoading: parityLoading, error: parityError } = useQuery({
+    queryKey: ['dev-parity-check', user?.id, selectedRange, selectedAction, significanceOnly],
+    queryFn: async () => {
+      if (!user?.id) return null
+      
+      const dateRange = getRange(selectedRange)
+      const startStr = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : null
+      const endStr = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : null
+
+      try {
+        // Get trends data (from RPC)
+        const dailyResult = await supabase.rpc('daily_moment_counts', {
+          p_user: user.id,
+          p_start: startStr,
+          p_end: endStr,
+          p_action: selectedAction,
+          p_significant_only: significanceOnly
+        })
+
+        if (dailyResult.error) throw dailyResult.error
+
+        // Get timeline data (direct query) for comparison
+        const timelineData = await Promise.all(
+          (dailyResult.data || []).map(async (trendsRow: any) => {
+            let query = supabase
+              .from('moments')
+              .select('action', { count: 'exact' })
+              .eq('user_id', user.id)
+              .gte('happened_at', `${trendsRow.d}T00:00:00`)
+              .lt('happened_at', `${trendsRow.d}T23:59:59`)
+
+            // Apply action filter
+            if (selectedAction !== 'both') {
+              query = query.eq('action', selectedAction)
+            }
+
+            // Apply significance filter  
+            if (significanceOnly) {
+              query = query.eq('significance', true)
+            }
+
+            const { count: totalCount, error: totalError } = await query
+
+            if (totalError) throw totalError
+
+            // Get given/received breakdown if action is 'both'
+            let givenCount = 0, receivedCount = 0
+            if (selectedAction === 'both') {
+              let givenQuery = supabase
+                .from('moments')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .eq('action', 'given')
+                .gte('happened_at', `${trendsRow.d}T00:00:00`)
+                .lt('happened_at', `${trendsRow.d}T23:59:59`)
+
+              if (significanceOnly) {
+                givenQuery = givenQuery.eq('significance', true)
+              }
+
+              const { count: gCount } = await givenQuery
+
+              let receivedQuery = supabase
+                .from('moments')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+                .eq('action', 'received')
+                .gte('happened_at', `${trendsRow.d}T00:00:00`)
+                .lt('happened_at', `${trendsRow.d}T23:59:59`)
+
+              if (significanceOnly) {
+                receivedQuery = receivedQuery.eq('significance', true)
+              }
+
+              const { count: rCount } = await receivedQuery
+
+              givenCount = gCount || 0
+              receivedCount = rCount || 0
+            } else if (selectedAction === 'given') {
+              givenCount = totalCount || 0
+            } else {
+              receivedCount = totalCount || 0
+            }
+
+            return {
+              date: trendsRow.d,
+              trendsTotal: trendsRow.total,
+              trendsGiven: trendsRow.given,
+              trendsReceived: trendsRow.received,
+              timelineTotal: totalCount || 0,
+              timelineGiven: givenCount,
+              timelineReceived: receivedCount,
+              mismatch: trendsRow.total !== (totalCount || 0)
+            }
+          })
+        )
+
+        return timelineData.slice(0, 10) // Limit to 10 rows for display
+      } catch (error) {
+        throw error
+      }
+    },
+    enabled: !!user?.id
+  })
+
   const handleInvalidateCache = async () => {
     setRefreshing(true)
     await queryClient.invalidateQueries({ queryKey: ['trends'] })
     await queryClient.invalidateQueries({ queryKey: ['dev-moment-counts'] })
     await queryClient.invalidateQueries({ queryKey: ['dev-rpc-test'] })
+    await queryClient.invalidateQueries({ queryKey: ['dev-parity-check'] })
     setRefreshing(false)
   }
 
@@ -365,6 +472,106 @@ export const DevTrendsCheck: React.FC = () => {
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Chart Parity Check */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Chart Parity Check: Trends vs Timeline
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Comparing RPC daily_moment_counts vs direct timeline queries for the same filters
+            </p>
+          </CardHeader>
+          <CardContent>
+            {parityLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-6 w-20" />
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-6 w-16" />
+                    <Skeleton className="h-6 w-20" />
+                  </div>
+                ))}
+              </div>
+            ) : parityError ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Error loading parity data: {parityError.message}
+                </AlertDescription>
+              </Alert>
+            ) : parityResults && parityResults.length > 0 ? (
+              <div className="space-y-4">
+                {/* Summary */}
+                <div className="flex items-center gap-4 text-sm">
+                  <Badge variant="outline">
+                    {parityResults.filter(r => !r.mismatch).length} / {parityResults.length} matching
+                  </Badge>
+                  {parityResults.some(r => r.mismatch) && (
+                    <Badge variant="destructive">
+                      {parityResults.filter(r => r.mismatch).length} mismatches found
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Date</th>
+                        <th className="text-right p-2">Trends Given</th>
+                        <th className="text-right p-2">Trends Received</th>
+                        <th className="text-right p-2">Trends Total</th>
+                        <th className="text-right p-2">Timeline Total</th>
+                        <th className="text-center p-2">Match</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parityResults.map((row, i) => (
+                        <tr 
+                          key={i} 
+                          className={cn(
+                            "border-b",
+                            row.mismatch ? "bg-destructive/10" : "hover:bg-muted/50"
+                          )}
+                        >
+                          <td className="p-2 font-medium">{row.date}</td>
+                          <td className="p-2 text-right">{row.trendsGiven}</td>
+                          <td className="p-2 text-right">{row.trendsReceived}</td>
+                          <td className="p-2 text-right font-medium">{row.trendsTotal}</td>
+                          <td className="p-2 text-right font-medium">{row.timelineTotal}</td>
+                          <td className="p-2 text-center">
+                            {row.mismatch ? (
+                              <Badge variant="destructive" className="text-xs">
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                Mismatch
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                OK
+                              </Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Activity className="h-8 w-8 mx-auto mb-2" />
+                <p className="text-sm">No data available for comparison</p>
               </div>
             )}
           </CardContent>
