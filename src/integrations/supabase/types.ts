@@ -436,17 +436,17 @@ export type Database = {
         Returns: string
       }
       category_share_delta: {
-        Args: {
-          p_action?: string
-          p_end: string
-          p_significant_only?: boolean
-          p_start: string
-          p_tz?: string
-          p_user: string
-        }
+        Args:
+          | {
+              p_action?: string
+              p_end: string
+              p_significant_only?: boolean
+              p_start: string
+              p_user: string
+            }
+          | { p_end: string; p_start: string; p_user: string }
         Returns: {
           category_id: string
-          cnt: number
           delta_pct: number
           name: string
           pct: number
@@ -471,14 +471,15 @@ export type Database = {
         Returns: string
       }
       daily_moment_counts: {
-        Args: {
-          p_action?: string
-          p_end?: string
-          p_significant_only?: boolean
-          p_start?: string
-          p_tz?: string
-          p_user: string
-        }
+        Args:
+          | {
+              p_action?: string
+              p_end: string
+              p_significant_only?: boolean
+              p_start: string
+              p_user: string
+            }
+          | { p_end: string; p_start: string; p_user: string }
         Returns: {
           d: string
           given: number
@@ -503,13 +504,15 @@ export type Database = {
         }[]
       }
       median_gap_by_category: {
-        Args: {
-          p_action?: string
-          p_end: string
-          p_significant_only?: boolean
-          p_start: string
-          p_user: string
-        }
+        Args:
+          | {
+              p_action?: string
+              p_end: string
+              p_significant_only?: boolean
+              p_start: string
+              p_user: string
+            }
+          | { p_end: string; p_start: string; p_user: string }
         Returns: {
           category_id: string
           median_days: number
@@ -537,13 +540,6 @@ export type Database = {
           happened_at: string
           moment_id: string
           person_id: string
-        }[]
-      }
-      user_moment_bounds: {
-        Args: { p_tz?: string; p_user: string }
-        Returns: {
-          max_date: string
-          min_date: string
         }[]
       }
     }
