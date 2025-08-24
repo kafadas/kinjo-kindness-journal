@@ -75,7 +75,9 @@ export const Timeline: React.FC = () => {
       };
     }
     
-    if (action && action !== 'both') filters.action = action as 'given' | 'received';
+    if (action && (action === 'given' || action === 'received')) {
+      filters.action = action as 'given' | 'received';
+    }
     if (significant === '1') filters.significance = true;
     if (q) filters.search = q;
     if (categoryId) filters.categoryId = categoryId;
@@ -130,6 +132,28 @@ export const Timeline: React.FC = () => {
 
   // Apply filters and update URL
   const handleApplyFilters = useCallback(() => {
+    // Validate date range
+    if (draftFilters.dateRange?.from && draftFilters.dateRange?.to) {
+      const from = startOfDay(draftFilters.dateRange.from);
+      const to = startOfDay(draftFilters.dateRange.to);
+      
+      if (from > to) {
+        toast.error('Start date must be before or equal to end date');
+        return;
+      }
+    }
+
+    // Process filters for application
+    const processedFilters = { ...draftFilters };
+    
+    // Convert 'to' date to end-of-day for inclusive range
+    if (processedFilters.dateRange?.to) {
+      processedFilters.dateRange = {
+        ...processedFilters.dateRange,
+        to: endOfDay(processedFilters.dateRange.to)
+      };
+    }
+
     const params = new URLSearchParams();
     
     if (draftFilters.dateRange?.from) {
@@ -139,14 +163,18 @@ export const Timeline: React.FC = () => {
       // Store the original date (not end of day) in URL for readability
       params.set('to', format(startOfDay(draftFilters.dateRange.to), 'yyyy-MM-dd'));
     }
-    if (draftFilters.action) params.set('action', draftFilters.action);
+    if (draftFilters.action) {
+      params.set('action', draftFilters.action);
+    }
     if (draftFilters.significance) params.set('significant', '1');
     if (draftFilters.search) params.set('q', draftFilters.search);
-    if (draftFilters.categoryId) params.set('categoryId', draftFilters.categoryId);
+    if (draftFilters.categoryId && draftFilters.categoryId !== 'all') {
+      params.set('categoryId', draftFilters.categoryId);
+    }
     if (draftFilters.personId) params.set('personId', draftFilters.personId);
     
     setSearchParams(params, { replace: true });
-    setAppliedFilters(draftFilters);
+    setAppliedFilters(processedFilters);
   }, [draftFilters, setSearchParams]);
 
   // Reset filters to what's currently applied (from URL)
@@ -199,7 +227,7 @@ export const Timeline: React.FC = () => {
     }
     
     // Category (only if not "all"/default)
-    if (appliedFilters.categoryId) {
+    if (appliedFilters.categoryId && appliedFilters.categoryId !== 'all') {
       const category = categories.find(c => c.id === appliedFilters.categoryId);
       if (category) parts.push(`Category: ${category.name}`);
     }
