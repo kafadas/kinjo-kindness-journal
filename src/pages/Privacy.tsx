@@ -10,24 +10,19 @@ import { useNavigate } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
 import { ExportDataModal } from '@/components/modals/ExportDataModal';
 import { DeleteDataModal } from '@/components/modals/DeleteDataModal';
-
 export const Privacy: React.FC = () => {
   const navigate = useNavigate();
-  const { isDiscreetMode, toggleDiscreetMode } = useDiscreetMode();
+  const {
+    isDiscreetMode,
+    toggleDiscreetMode
+  } = useDiscreetMode();
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<'csv' | 'pdf'>('csv');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteType, setDeleteType] = useState<'moments' | 'account'>('moments');
-
-  return (
-    <div className="p-6 max-w-4xl mx-auto">
+  return <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/preferences')}
-          className="p-2"
-        >
+        <Button variant="ghost" size="sm" onClick={() => navigate('/preferences')} className="p-2">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
@@ -43,36 +38,8 @@ export const Privacy: React.FC = () => {
       <div className="space-y-6">
         {/* Discreet Mode */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              Discreet Mode
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label htmlFor="discreet-mode" className="text-base font-medium">
-                  Enable Discreet Mode
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Blur names and sensitive details when others might see your screen
-                </p>
-              </div>
-              <Switch
-                id="discreet-mode"
-                checked={isDiscreetMode}
-                onCheckedChange={toggleDiscreetMode}
-              />
-            </div>
-            
-            <Alert>
-              <Shield className="h-4 w-4" />
-              <AlertDescription>
-                Discreet Mode only affects the visual display of your data. Your actual data remains unchanged and secure.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
+          
+          
         </Card>
 
         {/* Data Export */}
@@ -89,25 +56,17 @@ export const Privacy: React.FC = () => {
             </p>
             
             <div className="grid md:grid-cols-2 gap-3">
-              <Button 
-                variant="outline" 
-                className="justify-start"
-                onClick={() => {
-                  setExportFormat('csv')
-                  setExportModalOpen(true)
-                }}
-              >
+              <Button variant="outline" className="justify-start" onClick={() => {
+              setExportFormat('csv');
+              setExportModalOpen(true);
+            }}>
                 <Download className="h-4 w-4 mr-2" />
                 Export as CSV
               </Button>
-              <Button 
-                variant="outline" 
-                className="justify-start"
-                onClick={() => {
-                  setExportFormat('pdf')
-                  setExportModalOpen(true)
-                }}
-              >
+              <Button variant="outline" className="justify-start" onClick={() => {
+              setExportFormat('pdf');
+              setExportModalOpen(true);
+            }}>
                 <FileText className="h-4 w-4 mr-2" />
                 Export as PDF
               </Button>
@@ -174,14 +133,10 @@ export const Privacy: React.FC = () => {
                     Permanently delete all your kindness moments while keeping people and categories
                   </p>
                 </div>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => {
-                    setDeleteType('moments')
-                    setDeleteModalOpen(true)
-                  }}
-                >
+                <Button variant="destructive" size="sm" onClick={() => {
+                setDeleteType('moments');
+                setDeleteModalOpen(true);
+              }}>
                   Clear Moments
                 </Button>
               </div>
@@ -193,14 +148,10 @@ export const Privacy: React.FC = () => {
                     Permanently delete your account and all associated data
                   </p>
                 </div>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => {
-                    setDeleteType('account')
-                    setDeleteModalOpen(true)
-                  }}
-                >
+                <Button variant="destructive" size="sm" onClick={() => {
+                setDeleteType('account');
+                setDeleteModalOpen(true);
+              }}>
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Account
                 </Button>
@@ -218,17 +169,8 @@ export const Privacy: React.FC = () => {
         </div>
 
         {/* Modals */}
-        <ExportDataModal 
-          open={exportModalOpen} 
-          onOpenChange={setExportModalOpen}
-          initialFormat={exportFormat}
-        />
-        <DeleteDataModal 
-          open={deleteModalOpen} 
-          onOpenChange={setDeleteModalOpen}
-          deleteType={deleteType}
-        />
+        <ExportDataModal open={exportModalOpen} onOpenChange={setExportModalOpen} initialFormat={exportFormat} />
+        <DeleteDataModal open={deleteModalOpen} onOpenChange={setDeleteModalOpen} deleteType={deleteType} />
       </div>
-    </div>
-  );
+    </div>;
 };
