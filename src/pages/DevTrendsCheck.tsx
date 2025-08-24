@@ -107,6 +107,8 @@ export const DevTrendsCheck: React.FC = () => {
       const startStr = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : null
       const endStr = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : null
 
+      const tz = profile?.timezone ?? 'UTC'
+
       try {
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
           supabase.rpc('daily_moment_counts', {
@@ -114,14 +116,16 @@ export const DevTrendsCheck: React.FC = () => {
             p_start: startStr,
             p_end: endStr,
             p_action: selectedAction,
-            p_significant_only: significanceOnly
+            p_significant_only: significanceOnly,
+            p_tz: tz
           }),
           supabase.rpc('category_share_delta', {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
             p_action: selectedAction,
-            p_significant_only: significanceOnly
+            p_significant_only: significanceOnly,
+            p_tz: tz
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,
@@ -170,6 +174,8 @@ export const DevTrendsCheck: React.FC = () => {
       const startStr = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : null
       const endStr = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : null
 
+      const tz = profile?.timezone ?? 'UTC'
+
       try {
         // Get trends data (from RPC)
         const dailyResult = await supabase.rpc('daily_moment_counts', {
@@ -177,7 +183,8 @@ export const DevTrendsCheck: React.FC = () => {
           p_start: startStr,
           p_end: endStr,
           p_action: selectedAction,
-          p_significant_only: significanceOnly
+          p_significant_only: significanceOnly,
+          p_tz: tz
         })
 
         if (dailyResult.error) throw dailyResult.error
