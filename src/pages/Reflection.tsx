@@ -1,167 +1,198 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { BookOpen, RefreshCw, Calendar, Lightbulb } from 'lucide-react';
-import { useReflections } from '@/hooks/useReflections';
-import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
-import { DiscreetText } from '@/components/ui/DiscreetText';
-import { LoadingCard } from '@/components/ui/loading-card';
-import { EmptyState } from '@/components/ui/empty-state';
-import { format, subDays } from 'date-fns';
-
-type RangeLabel = '7d' | '30d' | '90d';
-
-const RANGE_OPTIONS: { label: RangeLabel; display: string }[] = [
-  { label: '7d', display: 'Last 7 days' },
-  { label: '30d', display: 'Last 30 days' },
-  { label: '90d', display: 'Last 90 days' },
-];
+import { BookOpen, Lightbulb, Heart, Calendar, Star } from 'lucide-react';
 
 export const Reflection: React.FC = () => {
-  const [selectedRange, setSelectedRange] = useState<RangeLabel>('7d');
-  const { reflection, loading, error, regenerating, regenerateReflection } = useReflections(selectedRange);
-  const { isDiscreetMode } = useDiscreetMode();
-
-  const formatDateRange = (range: RangeLabel) => {
-    const end = new Date();
-    const days = range === '7d' ? 6 : range === '30d' ? 29 : 89;
-    const start = subDays(end, days);
-    return `${format(start, 'MMM d')} - ${format(end, 'MMM d')}`;
-  };
-
-  if (loading) {
-    return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="font-display text-2xl font-semibold mb-2">
-            Your Reflection
-          </h1>
-          <p className="text-muted-foreground">
-            Taking time to reflect on your kindness journey
-          </p>
-        </div>
-        <LoadingCard />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="font-display text-2xl font-semibold mb-2">
-            Your Reflection
-          </h1>
-          <p className="text-muted-foreground">
-            Taking time to reflect on your kindness journey
-          </p>
-        </div>
-        <EmptyState
-          icon={BookOpen}
-          title="Unable to generate reflection"
-          description={error}
-          action={{
-            label: "Try Again",
-            onClick: () => window.location.reload()
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-semibold mb-2">
-          Your Reflection
+          Weekly Reflection
         </h1>
         <p className="text-muted-foreground">
-          Taking time to reflect on your kindness journey
+          Take time to reflect on your kindness journey
         </p>
       </div>
 
-      {/* Range Selection */}
-      <div className="mb-6">
-        <div className="flex gap-2 flex-wrap">
-          {RANGE_OPTIONS.map(({ label, display }) => (
-            <Button
-              key={label}
-              variant={selectedRange === label ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedRange(label)}
-              className="h-8"
-            >
-              {display}
-            </Button>
-          ))}
-        </div>
+      {/* Current Week Summary */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            This Week's Journey
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-4 gap-4 mb-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary mb-1">12</div>
+              <div className="text-sm text-muted-foreground">Acts of Kindness</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary mb-1">8</div>
+              <div className="text-sm text-muted-foreground">People Touched</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary mb-1">5</div>
+              <div className="text-sm text-muted-foreground">Categories</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-primary mb-1">7</div>
+              <div className="text-sm text-muted-foreground">Day Streak</div>
+            </div>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Badge variant="outline">Family</Badge>
+            <Badge variant="outline">Work</Badge>
+            <Badge variant="outline">Community</Badge>
+            <Badge variant="outline">Friends</Badge>
+            <Badge variant="outline">Self-care</Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Reflection Prompts */}
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5 text-primary" />
+              Moments That Mattered
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-2">
+                  What was your most meaningful act of kindness this week?
+                </p>
+                <Textarea
+                  placeholder="Reflect on the moment that brought you the most joy or fulfillment..."
+                  className="min-h-24 resize-none"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-primary" />
+              Insights & Learnings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-2">
+                  What did you learn about yourself or others?
+                </p>
+                <Textarea
+                  placeholder="Any patterns, surprises, or insights from your week..."
+                  className="min-h-24 resize-none"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {!reflection ? (
-        <EmptyState
-          icon={BookOpen}
-          title="No reflection available"
-          description="We couldn't find any data for this time period to reflect on."
-          action={{
-            label: "Try a different range",
-            onClick: () => setSelectedRange('30d')
-          }}
-        />
-      ) : (
-        <>
-          {/* Generated Reflection */}
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  {formatDateRange(selectedRange)}
-                </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={regenerateReflection}
-                  disabled={regenerating}
-                  className="gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
-                  {regenerating ? 'Regenerating...' : 'Regenerate'}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+      {/* Gratitude & Intentions */}
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-primary" />
+              Gratitude
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
               <div>
-                <h3 className="font-medium mb-2 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-primary" />
-                  Your Journey
-                </h3>
-                <DiscreetText 
-                  variant="body"
-                  text={reflection.summary || ''} 
-                  className="text-muted-foreground leading-relaxed"
+                <p className="text-sm font-medium mb-2">
+                  What kindness are you most grateful for this week?
+                </p>
+                <Textarea
+                  placeholder="Acknowledge the kindness you received..."
+                  className="min-h-24 resize-none"
                 />
               </div>
-              
-              <Separator />
-              
-              <div>
-                <h3 className="font-medium mb-2 flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-primary" />
-                  Gentle Suggestions
-                </h3>
-                <DiscreetText 
-                  variant="body"
-                  text={reflection.suggestions || ''} 
-                  className="text-muted-foreground leading-relaxed"
-                />
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </CardContent>
+        </Card>
 
-        </>
-      )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" />
+              Gentle Intentions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-2">
+                  How would you like to spread kindness next week?
+                </p>
+                <Textarea
+                  placeholder="Set gentle intentions for the week ahead..."
+                  className="min-h-24 resize-none"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Past Reflections */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Previous Reflections</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="border-l-2 border-primary/20 pl-4 py-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline" className="text-xs">March 18-24</Badge>
+                <span className="text-xs text-muted-foreground">2 weeks ago</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-1">
+                <strong>Key insight:</strong> Small gestures have the biggest impact on my day.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <strong>Intention set:</strong> Practice more active listening with family.
+              </p>
+            </div>
+            
+            <div className="border-l-2 border-primary/20 pl-4 py-2">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline" className="text-xs">March 11-17</Badge>
+                <span className="text-xs text-muted-foreground">3 weeks ago</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-1">
+                <strong>Key insight:</strong> Kindness to myself makes it easier to be kind to others.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <strong>Intention set:</strong> Include one act of self-kindness daily.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 mt-6">
+        <Button variant="outline">
+          Save Draft
+        </Button>
+        <Button>
+          Complete Reflection
+        </Button>
+      </div>
     </div>
   );
 };
