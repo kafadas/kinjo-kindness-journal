@@ -450,22 +450,14 @@ export type Database = {
         }[]
       }
       category_share_delta: {
-        Args:
-          | {
-              p_action?: string
-              p_end: string
-              p_significant_only?: boolean
-              p_start: string
-              p_tz?: string
-              p_user: string
-            }
-          | {
-              p_action?: string
-              p_end: string
-              p_significant_only?: boolean
-              p_start: string
-              p_user: string
-            }
+        Args: {
+          p_action?: string
+          p_end: string
+          p_significant_only?: boolean
+          p_start: string
+          p_tz?: string
+          p_user: string
+        }
         Returns: {
           category_id: string
           cnt: number

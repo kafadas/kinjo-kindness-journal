@@ -101,7 +101,8 @@ export const useTrends = (options: UseTrendsOptions) => {
             p_start: startDateStr,
             p_end: endDateStr,
             p_action: options.action,
-            p_significant_only: options.significance
+            p_significant_only: options.significance,
+            p_tz: tz
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,
