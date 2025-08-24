@@ -88,7 +88,7 @@ export const useTrends = (options: UseTrendsOptions) => {
 
         // Call the three RPC functions in parallel
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
-          supabase.rpc('daily_moment_counts', {
+          supabase.rpc('daily_moment_counts_v1', {
             p_user: user.id,
             p_start: startDateStr,
             p_end: endDateStr,
@@ -96,7 +96,7 @@ export const useTrends = (options: UseTrendsOptions) => {
             p_significant_only: options.significance,
             p_tz: tz
           }),
-          supabase.rpc('category_share_delta', {
+          supabase.rpc('category_share_delta_v1', {
             p_user: user.id,
             p_start: startDateStr,
             p_end: endDateStr,
@@ -120,17 +120,17 @@ export const useTrends = (options: UseTrendsOptions) => {
 
         // Transform the data to match expected format
         const seriesDaily: DailyData[] = (dailyResult.data || []).map(row => ({
-          date: row.day,
+          date: row.d,
           total: row.total,
-          given: row.given,
-          received: row.received
+          given: row.given_count,
+          received: row.received_count
         }))
 
         const categoryShare: CategoryData[] = (categoryResult.data || []).map(row => ({
           category_id: row.category_id,
-          name: row.name,
-          pct: parseFloat(row.pct.toString()) * 100, // Convert to percentage
-          delta_pct: parseFloat(row.delta_pct.toString()) * 100
+          name: row.category_name,
+          pct: parseFloat(row.pct.toString()), // Already in percentage format
+          delta_pct: 0 // v1 function doesn't include delta, set to 0 for now
         }))
 
         const medianGaps: MedianData[] = (medianResult.data || []).map(row => ({
