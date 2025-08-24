@@ -26,33 +26,58 @@ const ACTION_OPTIONS = [
   { label: 'Received', value: 'received' }
 ]
 
-const chartConfig = {
-  given: {
-    label: 'Kindness Given',
-    color: '#4f46e5' // indigo-600
-  },
-  received: {
-    label: 'Kindness Received', 
-    color: '#7c3aed' // violet-600
-  },
-  total: {
-    label: 'Total Moments',
-    color: '#4f46e5' // indigo-600
+  const chartConfig = {
+    given: {
+      label: 'Kindness Given',
+      color: '#4f46e5' // indigo-600
+    },
+    received: {
+      label: 'Kindness Received', 
+      color: 'hsl(142 76% 36%)' // success green
+    },
+    total: {
+      label: 'Total Moments',
+      color: '#4f46e5' // indigo-600
+    }
   }
-}
 
 const CHART_COLORS = [
-  'hsl(var(--primary))',
-  'hsl(var(--secondary))', 
-  'hsl(var(--accent))',
-  'hsl(var(--muted-foreground))',
-  '#ef4444', // red-500
-  '#3b82f6', // blue-500  
-  '#10b981', // green-500
-  '#8b5cf6', // purple-500
-  '#f59e0b', // yellow-500
-  '#06b6d4'  // cyan-500
+  '#6366f1', // indigo-500 - primary brand color
+  '#10b981', // emerald-500 - success green
+  '#f59e0b', // amber-500 - warm yellow
+  '#ef4444', // red-500 - red accent
+  '#8b5cf6', // violet-500 - purple accent
+  '#06b6d4', // cyan-500 - cool blue
+  '#ec4899', // pink-500 - pink accent
+  '#84cc16', // lime-500 - bright green
+  '#f97316', // orange-500 - vibrant orange
+  '#6b7280', // gray-500 - neutral
+  '#3b82f6', // blue-500 - classic blue
+  '#14b8a6', // teal-500 - teal accent
+  '#a855f7', // purple-600 - deeper purple
+  '#dc2626', // red-600 - deeper red
+  '#059669', // emerald-600 - deeper green
+  '#7c3aed', // violet-600 - deeper violet
+  '#db2777', // pink-600 - deeper pink
+  '#ca8a04', // yellow-600 - deeper yellow
+  '#ea580c', // orange-600 - deeper orange
+  '#4f46e5'  // indigo-600 - deeper indigo
 ]
+
+// Function to get a consistent color for a category
+const getCategoryColor = (categoryId: string, index: number): string => {
+  // Use a simple hash of the category ID to ensure consistent colors
+  let hash = 0;
+  for (let i = 0; i < categoryId.length; i++) {
+    const char = categoryId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  
+  // Use the hash to pick a color, with fallback to index
+  const colorIndex = Math.abs(hash) % CHART_COLORS.length;
+  return CHART_COLORS[colorIndex] || CHART_COLORS[index % CHART_COLORS.length];
+}
 
 export const Trends: React.FC = () => {
   const navigate = useNavigate()
@@ -523,7 +548,7 @@ export const Trends: React.FC = () => {
                   >
                     <div 
                       className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                      style={{ backgroundColor: getCategoryColor(category.category_id, index) }}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
