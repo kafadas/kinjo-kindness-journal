@@ -442,6 +442,14 @@ export type Database = {
               p_end: string
               p_significant_only?: boolean
               p_start: string
+              p_tz?: string
+              p_user: string
+            }
+          | {
+              p_action?: string
+              p_end: string
+              p_significant_only?: boolean
+              p_start: string
               p_user: string
             }
           | { p_end: string; p_start: string; p_user: string }
@@ -477,6 +485,14 @@ export type Database = {
               p_end: string
               p_significant_only?: boolean
               p_start: string
+              p_user: string
+            }
+          | {
+              p_action?: string
+              p_end?: string
+              p_significant_only?: boolean
+              p_start?: string
+              p_tz?: string
               p_user: string
             }
           | { p_end: string; p_start: string; p_user: string }
@@ -540,6 +556,13 @@ export type Database = {
           happened_at: string
           moment_id: string
           person_id: string
+        }[]
+      }
+      user_moment_bounds: {
+        Args: { p_tz?: string; p_user: string }
+        Returns: {
+          max_date: string
+          min_date: string
         }[]
       }
     }
