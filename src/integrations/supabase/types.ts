@@ -453,6 +453,22 @@ export type Database = {
           name: string
         }[]
       }
+      category_share_delta: {
+        Args: {
+          p_action: string
+          p_end: string
+          p_significant_only: boolean
+          p_start: string
+          p_tz: string
+          p_user: string
+        }
+        Returns: {
+          category_id: string
+          category_name: string
+          count: number
+          pct: number
+        }[]
+      }
       category_share_delta_v1: {
         Args: {
           p_action: string
@@ -464,9 +480,9 @@ export type Database = {
         }
         Returns: {
           category_id: string
+          category_name: string
           cnt: number
-          name: string
-          share: number
+          pct: number
         }[]
       }
       compute_streak: {
@@ -486,6 +502,22 @@ export type Database = {
           p_person_id?: string
         }
         Returns: string
+      }
+      daily_moment_counts: {
+        Args: {
+          p_action: string
+          p_end: string
+          p_significant_only: boolean
+          p_start: string
+          p_tz: string
+          p_user: string
+        }
+        Returns: {
+          day: string
+          given_count: number
+          received_count: number
+          total_count: number
+        }[]
       }
       daily_moment_counts_v1: {
         Args: {
