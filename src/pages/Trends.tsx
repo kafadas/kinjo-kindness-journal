@@ -386,7 +386,13 @@ export const Trends: React.FC = () => {
                 tickFormatter={(value) => format(parseISO(value), 'MMM d')}
                 fontSize={12}
               />
-              <YAxis fontSize={12} />
+              <YAxis 
+                fontSize={12} 
+                domain={selectedAction === 'both' ? 
+                  [0, (dataMax: number) => Math.max(dataMax * 1.1, 1)] : // For stacked, use total
+                  [0, 'dataMax'] // For single series, use that series max
+                }
+              />
               <ChartTooltip 
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
@@ -395,9 +401,19 @@ export const Trends: React.FC = () => {
                       return (
                         <div className="bg-background border rounded-lg shadow-lg p-3">
                           <p className="font-medium">{format(parseISO(label as string), 'MMM d, yyyy')}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Total {data.total} (Given {data.given}, Received {data.received})
-                          </p>
+                          {selectedAction === 'both' ? (
+                            <p className="text-sm text-muted-foreground">
+                              Given: {data.given}, Received: {data.received}, Total: {data.total}
+                            </p>
+                          ) : selectedAction === 'given' ? (
+                            <p className="text-sm text-muted-foreground">
+                              Given: {data.given}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Received: {data.received}
+                            </p>
+                          )}
                         </div>
                       );
                     }
@@ -405,22 +421,27 @@ export const Trends: React.FC = () => {
                   return null;
                 }}
               />
-              <Area
-                type="monotone"
-                dataKey="given"
-                stackId="1"
-                stroke="hsl(var(--primary))"
-                fill="hsl(var(--primary))"
-                fillOpacity={0.6}
-              />
-              <Area
-                type="monotone"
-                dataKey="received"
-                stackId="1"
-                stroke="hsl(var(--secondary))"
-                fill="hsl(var(--secondary))"
-                fillOpacity={0.6}
-              />
+              {/* Conditionally render areas based on selected action */}
+              {(selectedAction === 'both' || selectedAction === 'given') && (
+                <Area
+                  type="monotone"
+                  dataKey="given"
+                  stackId={selectedAction === 'both' ? "1" : undefined}
+                  stroke="hsl(var(--primary))"
+                  fill="hsl(var(--primary))"
+                  fillOpacity={0.6}
+                />
+              )}
+              {(selectedAction === 'both' || selectedAction === 'received') && (
+                <Area
+                  type="monotone"
+                  dataKey="received"
+                  stackId={selectedAction === 'both' ? "1" : undefined}
+                  stroke="hsl(var(--secondary))"
+                  fill="hsl(var(--secondary))"
+                  fillOpacity={0.6}
+                />
+              )}
               <ChartLegend content={<ChartLegendContent />} />
             </AreaChart>
           </ChartContainer>
