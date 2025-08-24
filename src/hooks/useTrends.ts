@@ -46,8 +46,17 @@ export const useTrends = (options: UseTrendsOptions) => {
     queryFn: async (): Promise<TrendsData> => {
       if (!user?.id) throw new Error('User not authenticated')
 
-      // Calculate date range using timezone-aware utility - null for "all"
-      const dateRange = getRange(options.range)
+      // Get user profile for timezone
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('timezone')
+        .eq('user_id', user.id)
+        .single()
+
+      const tz = profile?.timezone || 'UTC'
+
+      // Calculate date range - null for "all" to include entire history
+      const dateRange = options.range === 'all' ? null : getRange(options.range)
       
       let startDateStr: string | null = null
       let endDateStr: string | null = null
@@ -84,7 +93,8 @@ export const useTrends = (options: UseTrendsOptions) => {
             p_start: startDateStr,
             p_end: endDateStr,
             p_action: options.action,
-            p_significant_only: options.significance
+            p_significant_only: options.significance,
+            p_tz: tz
           }),
           supabase.rpc('category_share_delta', {
             p_user: user.id,
@@ -109,7 +119,7 @@ export const useTrends = (options: UseTrendsOptions) => {
 
         // Transform the data to match expected format
         const seriesDaily: DailyData[] = (dailyResult.data || []).map(row => ({
-          date: row.d,
+          date: row.day,
           total: row.total,
           given: row.given,
           received: row.received
