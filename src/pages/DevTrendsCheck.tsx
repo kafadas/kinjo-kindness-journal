@@ -132,8 +132,7 @@ export const DevTrendsCheck: React.FC = () => {
             p_start: startStr,
             p_end: endStr,
             p_action: selectedAction,
-            p_significant_only: significanceOnly,
-            p_tz: tz
+            p_significant_only: significanceOnly
           })
         ])
 
