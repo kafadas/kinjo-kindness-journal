@@ -565,6 +565,18 @@ export type Database = {
           name: string
         }[]
       }
+      monthly_overview: {
+        Args: {
+          p_action?: string
+          p_significant_only?: boolean
+          p_tz?: string
+          p_user: string
+        }
+        Returns: {
+          current_month_count: number
+          previous_month_count: number
+        }[]
+      }
       opportunities_people: {
         Args: { _from: string; _limit?: number; _to: string; _user: string }
         Returns: {

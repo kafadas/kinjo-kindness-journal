@@ -9,9 +9,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, AlertCircle, ChevronDown, Info } from 'lucide-react'
+import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, AlertCircle, ChevronDown, Info, ArrowUp, ArrowDown, Minus } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { useTrends } from '@/hooks/useTrends'
+import { useWeeklyPatterns } from '@/hooks/useWeeklyPatterns'
+import { useMonthlyOverview } from '@/hooks/useMonthlyOverview'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -87,6 +89,17 @@ export const Trends: React.FC = () => {
 
   const { data, isLoading, isError, error, refetch } = useTrends({
     range: selectedRange,
+    action: selectedAction,
+    significance: significanceOnly
+  })
+
+  const { data: weeklyData, isLoading: weeklyLoading } = useWeeklyPatterns({
+    range: selectedRange,
+    action: selectedAction,
+    significance: significanceOnly
+  })
+
+  const { data: monthlyData, isLoading: monthlyLoading } = useMonthlyOverview({
     action: selectedAction,
     significance: significanceOnly
   })
@@ -337,7 +350,153 @@ export const Trends: React.FC = () => {
         </Button>
       </div>
 
-      {/* KPI Cards - Row 2 */}
+      {/* Weekly Patterns & Monthly Overview - Row 2 */}
+      <div className="grid lg:grid-cols-2 gap-6 mb-8">
+        {/* Weekly Patterns */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Weekly Patterns
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {weeklyLoading ? (
+              <div className="space-y-3">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-4 w-8" />
+                  </div>
+                ))}
+              </div>
+            ) : weeklyData && weeklyData.length > 0 ? (
+              (() => {
+                const maxCount = Math.max(...weeklyData.map(d => d.count))
+                // Reorder to start with Monday (weekday 1)
+                const orderedData = [1, 2, 3, 4, 5, 6, 0].map(dow => 
+                  weeklyData.find(d => d.weekday === dow)
+                ).filter(Boolean)
+                
+                return (
+                  <div className="space-y-3">
+                    {orderedData.map((day) => (
+                      <div key={day.weekday} className="flex items-center gap-3">
+                        <div className="w-12 text-sm text-muted-foreground">
+                          {day.weekday_name.slice(0, 3)}
+                        </div>
+                        <div className="flex-1 relative">
+                          <div 
+                            className="h-6 bg-primary/20 rounded-full relative"
+                            style={{ 
+                              width: maxCount > 0 ? `${(day.count / maxCount) * 100}%` : '0%',
+                              minWidth: day.count > 0 ? '8px' : '0px'
+                            }}
+                          >
+                            <div className="absolute inset-0 bg-primary rounded-full opacity-60" />
+                          </div>
+                        </div>
+                        <div className="w-8 text-sm font-medium text-right">
+                          {day.count}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()
+            ) : (
+              <div className="text-center text-muted-foreground py-6">
+                No weekly pattern data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Monthly Overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Monthly Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {monthlyLoading ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <Skeleton className="h-8 w-16 mx-auto mb-2" />
+                    <Skeleton className="h-4 w-20 mx-auto" />
+                  </div>
+                  <div className="text-center">
+                    <Skeleton className="h-8 w-16 mx-auto mb-2" />
+                    <Skeleton className="h-4 w-20 mx-auto" />
+                  </div>
+                </div>
+                <Skeleton className="h-4 w-full" />
+              </div>
+            ) : monthlyData ? (
+              (() => {
+                const current = monthlyData.current_month_count
+                const previous = monthlyData.previous_month_count
+                const growthPct = previous > 0 ? ((current - previous) / previous) * 100 : (current > 0 ? 100 : 0)
+                const roundedGrowth = Math.round(growthPct)
+                
+                let message = "Consistent flow — small steps add up."
+                if (roundedGrowth >= 10) {
+                  message = "You're trending up — keep the momentum 💜"
+                } else if (roundedGrowth <= -10) {
+                  message = "A gentle nudge — try one small act this week."
+                }
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-semibold mb-1">{current}</div>
+                        <div className="text-sm text-muted-foreground">This Month</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-semibold mb-1">{previous}</div>
+                        <div className="text-sm text-muted-foreground">Last Month</div>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center border-t pt-4">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        {Math.abs(roundedGrowth) < 3 ? (
+                          <Minus className="h-4 w-4 text-muted-foreground" />
+                        ) : roundedGrowth > 0 ? (
+                          <ArrowUp className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <ArrowDown className="h-4 w-4 text-red-500" />
+                        )}
+                        <span className={cn(
+                          "font-medium",
+                          Math.abs(roundedGrowth) < 3 ? "text-muted-foreground" :
+                          roundedGrowth > 0 ? "text-green-500" : "text-red-500"
+                        )}>
+                          {roundedGrowth > 0 ? '+' : ''}{roundedGrowth}%
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {message}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()
+            ) : (
+              <div className="text-center text-muted-foreground py-6">
+                No monthly comparison data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* KPI Cards - Row 3 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <Card>
           <CardContent className="p-3 sm:p-4 text-center">
