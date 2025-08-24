@@ -44,41 +44,69 @@ export const useTrends = (options: UseTrendsOptions) => {
     queryFn: async (): Promise<TrendsData> => {
       if (!user?.id) throw new Error('User not authenticated')
 
-      // Calculate date range using timezone-aware utility - null for "all"
-      const dateRange = getRange(options.range)
-      
+      // Get user timezone first and cache it for the session
+      const { data: userTz, error: tzError } = await supabase.rpc('user_tz', { p_user: user.id })
+      if (tzError) {
+        console.warn('Could not fetch user timezone:', tzError)
+      }
+      const timezone = userTz || 'UTC'
+
+      // Calculate date ranges using specific calculations
       let startDateStr: string | null = null
       let endDateStr: string | null = null
-      
-      if (dateRange) {
-        startDateStr = format(dateRange.start, 'yyyy-MM-dd')
-        endDateStr = format(dateRange.end, 'yyyy-MM-dd')
+      let chartDateRange: { start: Date; end: Date } | null = null
+
+      const today = new Date()
+      const todayStr = format(today, 'yyyy-MM-dd')
+
+      if (options.range === 'all') {
+        startDateStr = '1900-01-01'
+        endDateStr = todayStr
+        
+        // For "all" range, get the user's actual date bounds for chart domain
+        const { data: rangeData, error: rangeError } = await supabase.rpc('get_user_moment_date_range', {
+          p_user: user.id
+        })
+        
+        if (!rangeError && rangeData && rangeData.length > 0 && rangeData[0].min_date && rangeData[0].max_date) {
+          chartDateRange = {
+            start: new Date(rangeData[0].min_date + 'T00:00:00'),
+            end: new Date(rangeData[0].max_date + 'T23:59:59')
+          }
+        }
+      } else {
+        // Specific range calculations as requested
+        let daysBack: number
+        switch (options.range) {
+          case '30d':
+            daysBack = 29 // today - 29 = 30 days total
+            break
+          case '90d':
+            daysBack = 89 // today - 89 = 90 days total
+            break
+          case '120d':
+            daysBack = 119 // today - 119 = 120 days total
+            break
+          case '1y':
+            daysBack = 364 // today - 364 = 365 days total
+            break
+          default:
+            daysBack = 29
+        }
+        
+        const startDate = new Date(today)
+        startDate.setDate(today.getDate() - daysBack)
+        
+        startDateStr = format(startDate, 'yyyy-MM-dd')
+        endDateStr = todayStr
+        
+        chartDateRange = {
+          start: startDate,
+          end: today
+        }
       }
 
       try {
-        // For "all" range, get the user's date bounds for chart domain
-        let chartDateRange: { start: Date; end: Date } | null = null
-        if (options.range === 'all') {
-          const { data: rangeData, error: rangeError } = await supabase.rpc('get_user_moment_date_range', {
-            p_user: user.id
-          })
-          
-          if (rangeError) {
-            console.warn('Could not fetch date range:', rangeError)
-          } else if (rangeData && rangeData.length > 0 && rangeData[0].min_date && rangeData[0].max_date) {
-            chartDateRange = {
-              start: new Date(rangeData[0].min_date + 'T00:00:00'),
-              end: new Date(rangeData[0].max_date + 'T23:59:59')
-            }
-          }
-        } else if (dateRange) {
-          chartDateRange = dateRange
-        }
-
-        // Get user timezone for deterministic bucketing
-        const { data: userTzData } = await supabase.rpc('user_tz', { p_user: user.id })
-        const userTz = userTzData || 'UTC'
-
         // Call the three RPC functions in parallel
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
           supabase.rpc('daily_moment_counts', {
@@ -87,7 +115,7 @@ export const useTrends = (options: UseTrendsOptions) => {
             p_end: endDateStr,
             p_action: options.action,
             p_significant_only: options.significance,
-            p_tz: userTz
+            p_tz: timezone
           }),
           supabase.rpc('category_share_delta', {
             p_user: user.id,
@@ -95,7 +123,7 @@ export const useTrends = (options: UseTrendsOptions) => {
             p_end: endDateStr,
             p_action: options.action,
             p_significant_only: options.significance,
-            p_tz: userTz
+            p_tz: timezone
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,

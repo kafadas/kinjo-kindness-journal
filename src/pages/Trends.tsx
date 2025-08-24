@@ -10,7 +10,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, AlertCircle, ChevronDown, Info } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import { useTrends } from '@/hooks/useTrends'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
@@ -373,7 +373,7 @@ export const Trends: React.FC = () => {
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
-            <AreaChart 
+            <LineChart 
               data={data.seriesDaily}
               onClick={(event) => {
                 if (event?.activeLabel) {
@@ -388,32 +388,17 @@ export const Trends: React.FC = () => {
               />
               <YAxis 
                 fontSize={12} 
-                domain={selectedAction === 'both' ? 
-                  [0, (dataMax: number) => Math.max(dataMax * 1.1, 1)] : // For stacked, use total
-                  [0, 'dataMax'] // For single series, use that series max
-                }
+                domain={[0, (dataMax: number) => Math.max(dataMax + 1, 1)]}
               />
               <ChartTooltip 
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0]?.payload;
                     if (data) {
+                      const dateStr = format(parseISO(label as string), 'MMM d')
                       return (
                         <div className="bg-background border rounded-lg shadow-lg p-3">
-                          <p className="font-medium">{format(parseISO(label as string), 'MMM d, yyyy')}</p>
-                          {selectedAction === 'both' ? (
-                            <p className="text-sm text-muted-foreground">
-                              Given: {data.given}, Received: {data.received}, Total: {data.total}
-                            </p>
-                          ) : selectedAction === 'given' ? (
-                            <p className="text-sm text-muted-foreground">
-                              Given: {data.given}
-                            </p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">
-                              Received: {data.received}
-                            </p>
-                          )}
+                          <p className="font-medium">{dateStr} — Given {data.given} · Received {data.received} · Total {data.total}</p>
                         </div>
                       );
                     }
@@ -421,29 +406,29 @@ export const Trends: React.FC = () => {
                   return null;
                 }}
               />
-              {/* Conditionally render areas based on selected action */}
+              {/* Always show both lines when action is 'both' or individual lines for specific actions */}
               {(selectedAction === 'both' || selectedAction === 'given') && (
-                <Area
+                <Line
                   type="monotone"
                   dataKey="given"
-                  stackId={selectedAction === 'both' ? "1" : undefined}
                   stroke="hsl(var(--primary))"
-                  fill="hsl(var(--primary))"
-                  fillOpacity={0.6}
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 3 }}
+                  activeDot={{ r: 5, stroke: 'hsl(var(--primary))', strokeWidth: 2 }}
                 />
               )}
               {(selectedAction === 'both' || selectedAction === 'received') && (
-                <Area
+                <Line
                   type="monotone"
                   dataKey="received"
-                  stackId={selectedAction === 'both' ? "1" : undefined}
                   stroke="hsl(var(--secondary))"
-                  fill="hsl(var(--secondary))"
-                  fillOpacity={0.6}
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(var(--secondary))', strokeWidth: 2, r: 3 }}
+                  activeDot={{ r: 5, stroke: 'hsl(var(--secondary))', strokeWidth: 2 }}
                 />
               )}
               <ChartLegend content={<ChartLegendContent />} />
-            </AreaChart>
+            </LineChart>
           </ChartContainer>
           <p className="text-xs text-muted-foreground mt-2 text-center">
             Charts respect the filters above (Action, Significant). Click any point to view moments from that day.
