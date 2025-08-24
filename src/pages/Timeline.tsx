@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -15,7 +16,8 @@ import {
   Edit,
   Star,
   CheckSquare,
-  Square
+  Square,
+  X
 } from 'lucide-react';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
 import { DiscreetText } from '@/components/ui/DiscreetText';
@@ -26,41 +28,93 @@ import { BulkActionModal } from '@/components/timeline/BulkActionModal';
 import { CaptureModal } from '@/components/modals/CaptureModal';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingCard, LoadingGrid } from '@/components/ui/loading-card';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow, format, endOfDay, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import type { MomentWithRelations } from '@/lib/db/types';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { usePeople } from '@/hooks/usePeople';
+import { useCategories } from '@/hooks/useCategories';
 
 export const Timeline: React.FC = () => {
   const { isDiscreetMode } = useDiscreetMode();
   const searchRef = useRef<HTMLInputElement>(null);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { people } = usePeople();
+  const { categories } = useCategories();
+  
+  // Debounced search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   
   // Initialize filters from URL parameters
   const getInitialFilters = (): TimelineFilters => {
     const filters: TimelineFilters = {};
     
-    const start = searchParams.get('start');
-    const end = searchParams.get('end');
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    const date = searchParams.get('date');
+    const range = searchParams.get('range');
     const action = searchParams.get('action');
     const significant = searchParams.get('significant');
+    const q = searchParams.get('q');
+    const categoryId = searchParams.get('categoryId');
+    const personId = searchParams.get('personId');
     
-    if (start && end) {
+    // Handle single date with range=day (from trends drill-down)
+    if (date && range === 'day') {
+      const selectedDate = new Date(date);
       filters.dateRange = {
-        from: new Date(start),
-        to: new Date(end)
+        from: startOfDay(selectedDate),
+        to: endOfDay(selectedDate)
+      };
+    } else if (from && to) {
+      filters.dateRange = {
+        from: new Date(from),
+        to: endOfDay(new Date(to)) // Make "to" date inclusive
       };
     }
+    
     if (action && action !== 'both') filters.action = action as 'given' | 'received';
-    if (significant === 'true') filters.significance = true;
+    if (significant === '1') filters.significance = true;
+    if (q) filters.search = q;
+    if (categoryId) filters.categoryId = categoryId;
+    if (personId) filters.personId = personId;
     
     return filters;
   };
   
-  const [filters, setFilters] = useState<TimelineFilters>(getInitialFilters);
+  // Applied filters (what's sent to the query)
+  const [appliedFilters, setAppliedFilters] = useState<TimelineFilters>(getInitialFilters);
+  
+  // Draft filters (local UI state buffer)
+  const [draftFilters, setDraftFilters] = useState<TimelineFilters>(appliedFilters);
+  
   const [selectedMoments, setSelectedMoments] = useState<Set<string>>(new Set());
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [captureOpen, setCaptureOpen] = useState(false);
+
+  // Update draft filters when search query changes
+  useEffect(() => {
+    setDraftFilters(prev => ({ ...prev, search: debouncedSearch || undefined }));
+  }, [debouncedSearch]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Initialize search from URL
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setSearchQuery(q);
+      setDebouncedSearch(q);
+    }
+  }, []);
 
   const { 
     moments, 
@@ -72,7 +126,45 @@ export const Timeline: React.FC = () => {
     isBulkUpdating,
     deleteMoment,
     isDeleting 
-  } = useTimeline(filters);
+  } = useTimeline(appliedFilters);
+
+  // Apply filters and update URL
+  const handleApplyFilters = useCallback(() => {
+    const params = new URLSearchParams();
+    
+    if (draftFilters.dateRange?.from) {
+      params.set('from', format(draftFilters.dateRange.from, 'yyyy-MM-dd'));
+    }
+    if (draftFilters.dateRange?.to) {
+      // Store the original date (not end of day) in URL for readability
+      params.set('to', format(startOfDay(draftFilters.dateRange.to), 'yyyy-MM-dd'));
+    }
+    if (draftFilters.action) params.set('action', draftFilters.action);
+    if (draftFilters.significance) params.set('significant', '1');
+    if (draftFilters.search) params.set('q', draftFilters.search);
+    if (draftFilters.categoryId) params.set('categoryId', draftFilters.categoryId);
+    if (draftFilters.personId) params.set('personId', draftFilters.personId);
+    
+    setSearchParams(params, { replace: true });
+    setAppliedFilters(draftFilters);
+  }, [draftFilters, setSearchParams]);
+
+  // Reset filters to what's currently applied (from URL)
+  const handleResetFilters = useCallback(() => {
+    setDraftFilters(appliedFilters);
+    const q = searchParams.get('q');
+    setSearchQuery(q || '');
+    setDebouncedSearch(q || '');
+  }, [appliedFilters, searchParams]);
+
+  // Clear all filters
+  const handleClearFilters = useCallback(() => {
+    setDraftFilters({});
+    setSearchQuery('');
+    setDebouncedSearch('');
+    setSearchParams(new URLSearchParams(), { replace: true });
+    setAppliedFilters({});
+  }, [setSearchParams]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts(
@@ -80,6 +172,48 @@ export const Timeline: React.FC = () => {
     () => searchRef.current?.focus()
   );
 
+  // Check if filters have changed from applied state
+  const hasUnappliedChanges = useMemo(() => {
+    return JSON.stringify(draftFilters) !== JSON.stringify(appliedFilters);
+  }, [draftFilters, appliedFilters]);
+
+  // Generate filter summary
+  const filterSummary = useMemo(() => {
+    const parts = [];
+    
+    if (appliedFilters.dateRange) {
+      const { from, to } = appliedFilters.dateRange;
+      if (format(from, 'yyyy-MM-dd') === format(startOfDay(to), 'yyyy-MM-dd')) {
+        parts.push(format(from, 'MMM d'));
+      } else {
+        parts.push(`${format(from, 'MMM d')} - ${format(startOfDay(to), 'MMM d')}`);
+      }
+    }
+    
+    if (appliedFilters.action) {
+      parts.push(appliedFilters.action === 'given' ? 'Given' : 'Received');
+    }
+    
+    if (appliedFilters.significance) {
+      parts.push('Significant');
+    }
+    
+    if (appliedFilters.search) {
+      parts.push(`q: ${appliedFilters.search}`);
+    }
+    
+    if (appliedFilters.categoryId) {
+      const category = categories.find(c => c.id === appliedFilters.categoryId);
+      if (category) parts.push(`Category: ${category.name}`);
+    }
+    
+    if (appliedFilters.personId) {
+      const person = people.find(p => p.id === appliedFilters.personId);
+      if (person) parts.push(`Person: ${person.display_name}`);
+    }
+    
+    return parts.join(' • ');
+  }, [appliedFilters, categories, people]);
   const handleSelectMoment = (momentId: string, selected: boolean) => {
     const newSelection = new Set(selectedMoments);
     if (selected) {
@@ -270,10 +404,49 @@ export const Timeline: React.FC = () => {
         </div>
       </div>
 
+      {/* Top Search Bar */}
+      <div className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={searchRef}
+            placeholder="Search moments..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
+      {/* Filter Summary */}
+      {filterSummary && (
+        <div className="mb-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Filters:</span>
+            <Badge variant="outline" className="text-xs">
+              {filterSummary}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearFilters}
+              className="h-6 px-2 text-xs"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Clear all
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <TimelineFiltersComponent 
-        filters={filters} 
-        onFiltersChange={setFilters}
+        filters={draftFilters}
+        appliedFilters={appliedFilters}
+        onFiltersChange={setDraftFilters}
+        onApply={handleApplyFilters}
+        onReset={handleResetFilters}
+        hasUnappliedChanges={hasUnappliedChanges}
         className="mb-6"
       />
 

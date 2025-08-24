@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Switch } from '@/components/ui/switch'
-import { X, Calendar as CalendarIcon, Filter } from 'lucide-react'
+import { X, Calendar as CalendarIcon, Filter, ChevronDown, ChevronUp } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import type { TimelineFilters } from '@/hooks/useTimeline'
@@ -17,41 +17,50 @@ import { useCategories } from '@/hooks/useCategories'
 
 interface TimelineFiltersProps {
   filters: TimelineFilters
+  appliedFilters: TimelineFilters
   onFiltersChange: (filters: TimelineFilters) => void
+  onApply: () => void
+  onReset: () => void
+  hasUnappliedChanges: boolean
   className?: string
 }
 
-export const TimelineFiltersComponent = ({ filters, onFiltersChange, className }: TimelineFiltersProps) => {
+export const TimelineFiltersComponent = ({ 
+  filters, 
+  appliedFilters,
+  onFiltersChange, 
+  onApply,
+  onReset,
+  hasUnappliedChanges,
+  className 
+}: TimelineFiltersProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [tagInput, setTagInput] = useState('')
   
   const { people } = usePeople()
   const { categories } = useCategories()
 
-  const updateFilter = <K extends keyof TimelineFilters>(key: K, value: TimelineFilters[K]) => {
+  const updateFilter = useCallback(<K extends keyof TimelineFilters>(key: K, value: TimelineFilters[K]) => {
     onFiltersChange({ ...filters, [key]: value })
-  }
+  }, [filters, onFiltersChange])
 
-  const addTag = () => {
+  const addTag = useCallback(() => {
     if (!tagInput.trim()) return
     const currentTags = filters.tags || []
     if (!currentTags.includes(tagInput.trim())) {
       updateFilter('tags', [...currentTags, tagInput.trim()])
     }
     setTagInput('')
-  }
+  }, [tagInput, filters.tags, updateFilter])
 
-  const removeTag = (tag: string) => {
+  const removeTag = useCallback((tag: string) => {
     const currentTags = filters.tags || []
     updateFilter('tags', currentTags.filter(t => t !== tag))
-  }
+  }, [filters.tags, updateFilter])
 
-  const clearFilters = () => {
-    onFiltersChange({})
-  }
-
-  const hasActiveFilters = Object.keys(filters).some(key => {
-    const value = filters[key as keyof TimelineFilters]
+  const hasActiveFilters = Object.keys(appliedFilters).some(key => {
+    if (key === 'search') return false // Search is handled separately
+    const value = appliedFilters[key as keyof TimelineFilters]
     if (key === 'tags') return value && (value as string[]).length > 0
     if (key === 'dateRange') return value !== undefined
     return value !== undefined && value !== null && value !== ''
@@ -66,17 +75,23 @@ export const TimelineFiltersComponent = ({ filters, onFiltersChange, className }
             Filters
           </CardTitle>
           <div className="flex items-center gap-2">
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters}>
-                Clear All
-              </Button>
-            )}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsOpen(!isOpen)}
+              className="flex items-center gap-1"
             >
-              {isOpen ? 'Hide' : 'Show'}
+              {isOpen ? (
+                <>
+                  Hide Filters
+                  <ChevronUp className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  Show Filters
+                  <ChevronDown className="h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -84,17 +99,6 @@ export const TimelineFiltersComponent = ({ filters, onFiltersChange, className }
       
       {isOpen && (
         <CardContent className="pt-0 space-y-4">
-          {/* Search */}
-          <div>
-            <Label htmlFor="search">Search</Label>
-            <Input
-              id="search"
-              placeholder="Search descriptions and tags..."
-              value={filters.search || ''}
-              onChange={(e) => updateFilter('search', e.target.value)}
-            />
-          </div>
-
           {/* Date Range */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -127,6 +131,7 @@ export const TimelineFiltersComponent = ({ filters, onFiltersChange, className }
                       })
                     }
                     initialFocus
+                    className="p-3 pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -162,6 +167,7 @@ export const TimelineFiltersComponent = ({ filters, onFiltersChange, className }
                       })
                     }
                     initialFocus
+                    className="p-3 pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
@@ -173,7 +179,7 @@ export const TimelineFiltersComponent = ({ filters, onFiltersChange, className }
             <Label>Action Type</Label>
             <Select 
               value={filters.action || 'all'} 
-              onValueChange={(value) => updateFilter('action', value === 'all' ? null : value as 'given' | 'received')}
+              onValueChange={(value) => updateFilter('action', value === 'all' ? undefined : value as 'given' | 'received')}
             >
               <SelectTrigger>
                 <SelectValue placeholder="All actions" />
@@ -276,6 +282,24 @@ export const TimelineFiltersComponent = ({ filters, onFiltersChange, className }
               onCheckedChange={(checked) => updateFilter('significance', checked ? true : undefined)}
             />
             <Label htmlFor="significance">Show only significant moments</Label>
+          </div>
+
+          {/* Apply/Reset Buttons */}
+          <div className="flex gap-2 pt-4 border-t">
+            <Button 
+              onClick={onApply}
+              disabled={!hasUnappliedChanges}
+              className="flex-1"
+            >
+              Apply Filters
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={onReset}
+              disabled={!hasUnappliedChanges}
+            >
+              Reset
+            </Button>
           </div>
         </CardContent>
       )}
