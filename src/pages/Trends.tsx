@@ -387,8 +387,8 @@ export const Trends: React.FC = () => {
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0.05} />
                 </linearGradient>
                 <linearGradient id="receivedGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.24} />
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.05} />
+                  <stop offset="5%" stopColor="hsl(142 76% 36%)" stopOpacity={0.24} />
+                  <stop offset="95%" stopColor="hsl(142 76% 36%)" stopOpacity={0.05} />
                 </linearGradient>
               </defs>
               <XAxis 
@@ -415,7 +415,7 @@ export const Trends: React.FC = () => {
                               <span>Given: {data.given}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-violet-600"></div>
+                              <div className="w-3 h-3 rounded-full bg-success"></div>
                               <span>Received: {data.received}</span>
                             </div>
                             <div className="flex items-center gap-2 pt-1 border-t">
@@ -445,7 +445,7 @@ export const Trends: React.FC = () => {
                   type="monotone"
                   dataKey="received"
                   stackId="1"
-                  stroke="#7c3aed"
+                  stroke="hsl(142 76% 36%)"
                   fill="url(#receivedGradient)"
                   strokeWidth={2}
                 />
@@ -468,7 +468,7 @@ export const Trends: React.FC = () => {
                           <div 
                             className="w-3 h-3 rounded-full"
                             style={{ 
-                              backgroundColor: item.dataKey === 'given' ? '#4f46e5' : '#7c3aed'
+                              backgroundColor: item.dataKey === 'given' ? '#4f46e5' : 'hsl(142 76% 36%)'
                             }}
                           />
                           <span className="text-muted-foreground">
