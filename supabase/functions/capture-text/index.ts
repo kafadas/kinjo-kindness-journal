@@ -8,8 +8,8 @@ const corsHeaders = {
 
 interface CaptureRequest {
   text: string
-  seedPerson?: string
-  seedCategory?: string
+  seedPersonId?: string
+  seedCategoryId?: string
 }
 
 serve(async (req) => {
@@ -59,9 +59,9 @@ serve(async (req) => {
       })
     }
 
-    const { text, seedPerson, seedCategory } = requestBody
+    const { text, seedPersonId, seedCategoryId } = requestBody
 
-    console.log('Capture request:', { text, seedPerson, seedCategory, userId: user.id })
+    console.log('Capture request:', { text, seedPersonId, seedCategoryId, userId: user.id })
 
     // Basic text validation
     if (!text || text.trim().length === 0) {
@@ -95,57 +95,8 @@ serve(async (req) => {
       source: 'text' as const,
       significance: false,
       tags: [],
-      category_id: userSettings?.default_category_id || otherCategory?.id || null
-    }
-
-    // If seedCategory is provided, try to find the category (overrides defaults)
-    if (seedCategory) {
-      const { data: categories } = await supabaseClient
-        .from('categories')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('slug', seedCategory)
-        .limit(1)
-
-      if (categories && categories.length > 0) {
-        momentData.category_id = categories[0].id
-      }
-    }
-
-    // If seedPerson is provided, try to find or create the person
-    if (seedPerson) {
-      let personId: string | null = null
-
-      // First, try to find existing person
-      const { data: existingPeople } = await supabaseClient
-        .from('people')
-        .select('id')
-        .eq('user_id', user.id)
-        .ilike('display_name', `%${seedPerson}%`)
-        .limit(1)
-
-      if (existingPeople && existingPeople.length > 0) {
-        personId = existingPeople[0].id
-      } else {
-        // Create new person
-        const { data: newPerson } = await supabaseClient
-          .from('people')
-          .insert({
-            user_id: user.id,
-            display_name: seedPerson,
-            avatar_type: 'initials'
-          })
-          .select('id')
-          .single()
-
-        if (newPerson) {
-          personId = newPerson.id
-        }
-      }
-
-      if (personId) {
-        momentData.person_id = personId
-      }
+      category_id: seedCategoryId || userSettings?.default_category_id || otherCategory?.id || null,
+      person_id: seedPersonId || null
     }
 
     // Create the moment

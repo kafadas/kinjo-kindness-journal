@@ -13,15 +13,15 @@ import { useCapture } from '@/hooks/useCapture';
 interface CaptureModalProps {
   isOpen: boolean;
   onClose: () => void;
-  seedPerson?: string;
-  seedCategory?: string;
+  seedPersonId?: string;
+  seedCategoryId?: string;
 }
 
 export const CaptureModal: React.FC<CaptureModalProps> = ({
   isOpen,
   onClose,
-  seedPerson,
-  seedCategory,
+  seedPersonId,
+  seedCategoryId,
 }) => {
   const [text, setText] = useState('');
   const { capture, loading } = useCapture();
@@ -32,8 +32,8 @@ export const CaptureModal: React.FC<CaptureModalProps> = ({
     try {
       await capture({
         text: text.trim(),
-        seedPerson,
-        seedCategory,
+        seedPersonId,
+        seedCategoryId,
       });
       setText('');
       onClose();

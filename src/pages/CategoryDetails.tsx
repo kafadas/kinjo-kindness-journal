@@ -447,7 +447,7 @@ export const CategoryDetails: React.FC = () => {
       <CaptureModal
         isOpen={captureModalOpen}
         onClose={() => setCaptureModalOpen(false)}
-        seedCategory={id}
+        seedCategoryId={id}
       />
     </div>
   )

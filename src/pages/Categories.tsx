@@ -269,7 +269,7 @@ export const Categories: React.FC = () => {
       <CaptureModal
         isOpen={captureModalOpen}
         onClose={() => setCaptureModalOpen(false)}
-        seedCategory={selectedCategoryId || undefined}
+        seedCategoryId={selectedCategoryId || undefined}
       />
     </div>
   )

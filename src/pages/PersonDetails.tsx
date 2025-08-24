@@ -194,8 +194,8 @@ export const PersonDetails: React.FC = () => {
       <CaptureModal
         isOpen={captureOpen}
         onClose={() => setCaptureOpen(false)}
-        seedPerson={person?.display_name}
-        seedCategory={person?.default_category_id}
+        seedPersonId={person?.id}
+        seedCategoryId={person?.default_category_id}
       />
 
       <AddToGroupModal

@@ -184,8 +184,8 @@ export const People: React.FC = () => {
           setCaptureOpen(false);
           setSelectedPerson(null);
         }}
-        seedPerson={selectedPerson?.display_name}
-        seedCategory={selectedPerson?.default_category_id}
+        seedPersonId={selectedPerson?.id}
+        seedCategoryId={selectedPerson?.default_category_id}
       />
 
       {selectedPerson && (
