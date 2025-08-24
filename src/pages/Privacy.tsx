@@ -15,6 +15,7 @@ export const Privacy: React.FC = () => {
   const navigate = useNavigate();
   const { isDiscreetMode, toggleDiscreetMode } = useDiscreetMode();
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'csv' | 'pdf'>('csv');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteType, setDeleteType] = useState<'moments' | 'account'>('moments');
 
@@ -91,7 +92,10 @@ export const Privacy: React.FC = () => {
               <Button 
                 variant="outline" 
                 className="justify-start"
-                onClick={() => setExportModalOpen(true)}
+                onClick={() => {
+                  setExportFormat('csv')
+                  setExportModalOpen(true)
+                }}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Export as CSV
@@ -99,7 +103,10 @@ export const Privacy: React.FC = () => {
               <Button 
                 variant="outline" 
                 className="justify-start"
-                onClick={() => setExportModalOpen(true)}
+                onClick={() => {
+                  setExportFormat('pdf')
+                  setExportModalOpen(true)
+                }}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Export as PDF
@@ -213,7 +220,8 @@ export const Privacy: React.FC = () => {
         {/* Modals */}
         <ExportDataModal 
           open={exportModalOpen} 
-          onOpenChange={setExportModalOpen} 
+          onOpenChange={setExportModalOpen}
+          initialFormat={exportFormat}
         />
         <DeleteDataModal 
           open={deleteModalOpen} 
