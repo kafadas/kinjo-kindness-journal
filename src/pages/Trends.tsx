@@ -66,12 +66,6 @@ export const Trends: React.FC = () => {
     significance: significanceOnly
   })
 
-  // Separate query for Given vs Received KPI (always uses 'both')
-  const { data: balanceData } = useTrends({
-    range: selectedRange,
-    action: 'both', // Always both for balance calculation
-    significance: false // Always include all moments for balance
-  })
 
   const handleClearFilters = () => {
     clearFilters()
@@ -239,11 +233,8 @@ export const Trends: React.FC = () => {
   }
 
   const totalMoments = data.seriesDaily.reduce((sum, day) => sum + day.total, 0)
-  
-  // Use balance data for Given vs Received calculation
-  const balanceTotalMoments = balanceData ? balanceData.seriesDaily.reduce((sum, day) => sum + day.total, 0) : 0
-  const balanceGivenMoments = balanceData ? balanceData.seriesDaily.reduce((sum, day) => sum + day.given, 0) : 0
-  const givenPercentage = balanceTotalMoments > 0 ? (balanceGivenMoments / balanceTotalMoments) : 0
+  const givenMoments = data.seriesDaily.reduce((sum, day) => sum + day.given, 0)
+  const givenPercentage = totalMoments > 0 ? (givenMoments / totalMoments) : 0
 
   return (
     <div className="p-3 sm:p-6 max-w-6xl mx-auto w-full">
