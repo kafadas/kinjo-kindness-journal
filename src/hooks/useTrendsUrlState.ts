@@ -11,7 +11,7 @@ export const useTrendsUrlState = () => {
   const [searchParams, setSearchParams] = useSearchParams()
 
   const getUrlState = (): TrendsUrlState => {
-    const range = searchParams.get('range') as DateRangeLabel || '30d'
+    const range = searchParams.get('range') as DateRangeLabel || 'all'
     const action = searchParams.get('action') as 'given' | 'received' | 'both' || 'both'
     const significant = searchParams.get('significant') === '1'
 
@@ -23,7 +23,7 @@ export const useTrendsUrlState = () => {
     const newState = { ...current, ...state }
     
     const params = new URLSearchParams()
-    if (newState.range !== '30d') params.set('range', newState.range)
+    if (newState.range !== 'all') params.set('range', newState.range)
     if (newState.action !== 'both') params.set('action', newState.action)
     if (newState.significant) params.set('significant', '1')
     

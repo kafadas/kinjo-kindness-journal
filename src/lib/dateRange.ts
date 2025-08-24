@@ -1,13 +1,18 @@
 import { startOfDay, endOfDay, subDays, subYears } from 'date-fns'
 
-export type DateRangeLabel = '30d' | '90d' | '120d' | '1y'
+export type DateRangeLabel = 'all' | '30d' | '90d' | '120d' | '1y'
 
 export interface DateRange {
   start: Date
   end: Date
 }
 
-export const getRange = (label: DateRangeLabel, timezone: string = 'UTC'): DateRange => {
+export const getRange = (label: DateRangeLabel, timezone: string = 'UTC'): DateRange | null => {
+  // Return null for "all" to indicate no date filter
+  if (label === 'all') {
+    return null
+  }
+  
   // Get current date in user's timezone
   const now = new Date()
   const end = endOfDay(now)
@@ -35,6 +40,7 @@ export const getRange = (label: DateRangeLabel, timezone: string = 'UTC'): DateR
 }
 
 export const RANGE_OPTIONS = [
+  { label: 'all' as DateRangeLabel, display: 'All' },
   { label: '30d' as DateRangeLabel, display: '30 days' },
   { label: '90d' as DateRangeLabel, display: '90 days' },
   { label: '120d' as DateRangeLabel, display: '120 days' },

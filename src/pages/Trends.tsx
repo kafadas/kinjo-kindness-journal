@@ -9,11 +9,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, RefreshCw, AlertCircle, ChevronDown, Info } from 'lucide-react'
+import { TrendingUp, Calendar, Heart, Users, BarChart3, Plus, Filter, AlertCircle, ChevronDown, Info } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import { useTrends } from '@/hooks/useTrends'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -57,7 +56,6 @@ const CHART_COLORS = [
 
 export const Trends: React.FC = () => {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { user } = useAuth()
   const { urlState, setUrlState, clearFilters } = useTrendsUrlState()
   const { range: selectedRange, action: selectedAction, significant: significanceOnly } = urlState
@@ -75,25 +73,15 @@ export const Trends: React.FC = () => {
     significance: false // Always include all moments for balance
   })
 
-  const handleRefresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['trends', user?.id] })
-    refetch()
-  }
-
   const handleClearFilters = () => {
     clearFilters()
-    // Trigger refetch after state updates
-    setTimeout(() => {
-      queryClient.invalidateQueries({ queryKey: ['trends', user?.id] })
-      refetch()
-    }, 0)
   }
 
-  const hasActiveFilters = selectedAction !== 'both' || significanceOnly
+  const hasActiveFilters = selectedRange !== 'all' || selectedAction !== 'both' || significanceOnly
 
   const handleCategoryClick = (categoryId: string) => {
     const params = new URLSearchParams()
-    if (selectedRange !== '30d') params.set('range', selectedRange)
+    if (selectedRange !== 'all') params.set('range', selectedRange)
     if (selectedAction !== 'both') params.set('action', selectedAction)
     if (significanceOnly) params.set('significant', '1')
     navigate(`/categories/${categoryId}?${params.toString()}`)
@@ -121,10 +109,6 @@ export const Trends: React.FC = () => {
                 Discover gentle patterns in your kindness journey
               </p>
             </div>
-            <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
-              <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-              Refresh
-            </Button>
           </div>
         </div>
         
@@ -144,10 +128,6 @@ export const Trends: React.FC = () => {
         </Alert>
 
         <div className="flex gap-2">
-          <Button onClick={handleRefresh} disabled={isLoading}>
-            <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-            Refresh Data
-          </Button>
           <Button variant="outline" onClick={() => navigate('/capture')}>
             <Plus className="h-4 w-4 mr-2" />
             Add Moment
@@ -169,12 +149,6 @@ export const Trends: React.FC = () => {
               <p className="text-muted-foreground">
                 Discover gentle patterns in your kindness journey
               </p>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
-                <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-                Refresh
-              </Button>
             </div>
           </div>
         </div>
@@ -242,10 +216,6 @@ export const Trends: React.FC = () => {
                 Discover gentle patterns in your kindness journey
               </p>
             </div>
-            <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
-              <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-              Refresh
-            </Button>
           </div>
         </div>
         <EmptyState
@@ -259,9 +229,9 @@ export const Trends: React.FC = () => {
         />
         
         <div className="flex justify-center mt-4">
-          <Button variant="outline" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Data
+          <Button variant="outline" onClick={() => navigate('/capture')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Moment
           </Button>
         </div>
       </div>
@@ -287,10 +257,6 @@ export const Trends: React.FC = () => {
                 Discover gentle patterns in your kindness journey
               </p>
             </div>
-            <Button onClick={handleRefresh} variant="outline" disabled={isLoading}>
-              <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-              Refresh
-            </Button>
           </div>
         </div>
 
@@ -353,18 +319,6 @@ export const Trends: React.FC = () => {
         >
           Clear filters
         </Button>
-
-        {/* Refresh - Mobile placement */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className="sm:ml-auto text-xs sm:text-sm px-2 sm:px-3"
-        >
-          <RefreshCw className={cn("h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2", isLoading && "animate-spin")} />
-          Refresh
-        </Button>
       </div>
 
       {/* KPI Cards - Row 2 */}
@@ -396,6 +350,9 @@ export const Trends: React.FC = () => {
             </div>
             <div className="text-base sm:text-lg font-semibold mb-1">
               {(() => {
+                if (selectedRange === 'all') {
+                  return totalMoments > 0 ? 'N/A' : '0'
+                }
                 const days = selectedRange === '1y' ? 365 : parseInt(selectedRange.replace('d', ''))
                 return totalMoments > 0 ? (totalMoments / days).toFixed(1) : '0'
               })()}

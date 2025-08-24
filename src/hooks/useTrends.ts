@@ -44,11 +44,16 @@ export const useTrends = (options: UseTrendsOptions) => {
     queryFn: async (): Promise<TrendsData> => {
       if (!user?.id) throw new Error('User not authenticated')
 
-      // Calculate date range using timezone-aware utility
-      const { start, end } = getRange(options.range)
+      // Calculate date range using timezone-aware utility - null for "all"
+      const dateRange = getRange(options.range)
       
-      const startDateStr = format(start, 'yyyy-MM-dd')
-      const endDateStr = format(end, 'yyyy-MM-dd')
+      let startDateStr: string | null = null
+      let endDateStr: string | null = null
+      
+      if (dateRange) {
+        startDateStr = format(dateRange.start, 'yyyy-MM-dd')
+        endDateStr = format(dateRange.end, 'yyyy-MM-dd')
+      }
 
       try {
         // Call the three RPC functions in parallel
