@@ -599,6 +599,21 @@ export type Database = {
         Args: { p_user: string }
         Returns: string
       }
+      weekly_patterns: {
+        Args: {
+          p_action?: string
+          p_end: string
+          p_significant_only?: boolean
+          p_start: string
+          p_tz?: string
+          p_user: string
+        }
+        Returns: {
+          count: number
+          weekday: number
+          weekday_name: string
+        }[]
+      }
     }
     Enums: {
       action_t: "given" | "received"
