@@ -431,41 +431,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      _action_from_text: {
-        Args: { p_action: string }
-        Returns: Database["public"]["Enums"]["action_t"]
-      }
       auth_uid: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      category_share_counts: {
-        Args: {
-          p_action: string
-          p_end: string
-          p_significant_only: boolean
-          p_start: string
-          p_user: string
-        }
+      category_share_delta: {
+        Args:
+          | {
+              p_action?: string
+              p_end: string
+              p_significant_only?: boolean
+              p_start: string
+              p_user: string
+            }
+          | { p_end: string; p_start: string; p_user: string }
         Returns: {
           category_id: string
-          count: number
+          delta_pct: number
           name: string
-        }[]
-      }
-      category_share_delta_v1: {
-        Args: {
-          p_action: string
-          p_end: string
-          p_significant_only: boolean
-          p_start: string
-          p_tz: string
-          p_user: string
-        }
-        Returns: {
-          category_id: string
-          category_name: string
-          cnt: number
           pct: number
         }[]
       }
@@ -487,19 +470,20 @@ export type Database = {
         }
         Returns: string
       }
-      daily_moment_counts_v1: {
-        Args: {
-          p_action: string
-          p_end: string
-          p_significant_only: boolean
-          p_start: string
-          p_tz: string
-          p_user: string
-        }
+      daily_moment_counts: {
+        Args:
+          | {
+              p_action?: string
+              p_end: string
+              p_significant_only?: boolean
+              p_start: string
+              p_user: string
+            }
+          | { p_end: string; p_start: string; p_user: string }
         Returns: {
           d: string
-          given_count: number
-          received_count: number
+          given: number
+          received: number
           total: number
         }[]
       }
@@ -520,13 +504,15 @@ export type Database = {
         }[]
       }
       median_gap_by_category: {
-        Args: {
-          p_action?: string
-          p_end: string
-          p_significant_only?: boolean
-          p_start: string
-          p_user: string
-        }
+        Args:
+          | {
+              p_action?: string
+              p_end: string
+              p_significant_only?: boolean
+              p_start: string
+              p_user: string
+            }
+          | { p_end: string; p_start: string; p_user: string }
         Returns: {
           category_id: string
           median_days: number
@@ -554,13 +540,6 @@ export type Database = {
           happened_at: string
           moment_id: string
           person_id: string
-        }[]
-      }
-      user_moment_bounds: {
-        Args: { p_tz?: string; p_user: string }
-        Returns: {
-          max_date: string
-          min_date: string
         }[]
       }
     }
