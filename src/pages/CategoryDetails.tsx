@@ -6,7 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Heart, Calendar, Filter, TrendingUp, Users, Plus, Search, MoreHorizontal, Edit, Tag } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ArrowLeft, Heart, Calendar, Filter, TrendingUp, Users, Plus, Search, MoreHorizontal, Edit, Tag, Info, X } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
 import { DiscreetText } from '@/components/ui/DiscreetText';
@@ -15,32 +17,31 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingGrid, LoadingCard } from '@/components/ui/loading-card';
 import { CaptureModal } from '@/components/modals/CaptureModal';
 import { formatDistanceToNow, startOfMonth, endOfMonth, subDays, format, isToday, isYesterday } from 'date-fns';
+import { RANGE_OPTIONS, type DateRangeLabel } from '@/lib/dateRange';
+import { useTrendsUrlState } from '@/hooks/useTrendsUrlState';
+import { cn } from '@/lib/utils';
+
+const ACTION_OPTIONS = [
+  { label: 'Both', value: 'both' },
+  { label: 'Given', value: 'given' },
+  { label: 'Received', value: 'received' }
+]
 
 export const CategoryDetails: React.FC = () => {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
-  const [searchParams] = useSearchParams()
   const { isDiscreetMode } = useDiscreetMode()
+  const { urlState, setUrlState, clearFilters } = useTrendsUrlState()
+  const { range: selectedRange, action: selectedAction, significant: significanceOnly } = urlState
   
-  // Initialize filters from URL parameters
-  const getInitialState = () => {
-    const range = searchParams.get('range')
-    const action = searchParams.get('action')
-    const significant = searchParams.get('significant')
-    
-    return {
-      searchQuery: '',
-      selectedFilter: (action && action !== 'both' ? action : 'all') as 'all' | 'given' | 'received',
-      // Note: range and significant filters would need to be implemented in the category details hook
-    }
-  }
-  
-  const initialState = getInitialState()
-  const [searchQuery, setSearchQuery] = useState(initialState.searchQuery)
-  const [selectedFilter, setSelectedFilter] = useState(initialState.selectedFilter)
+  const [searchQuery, setSearchQuery] = useState('')
   const [captureModalOpen, setCaptureModalOpen] = useState(false)
 
-  const { category, moments, stats, isLoading } = useCategoryDetails(id!)
+  const { category, moments, stats, isLoading } = useCategoryDetails(id!, {
+    range: selectedRange,
+    action: selectedAction,
+    significant: significanceOnly
+  })
 
   if (isLoading) {
     return (
@@ -75,15 +76,13 @@ export const CategoryDetails: React.FC = () => {
     )
   }
 
-  // Filter moments based on search and action filter
+  // Filter moments based on search only (other filters already applied in query)
   const filteredMoments = moments.filter(moment => {
     const matchesSearch = !searchQuery || 
       moment.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       moment.person?.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
     
-    const matchesFilter = selectedFilter === 'all' || moment.action === selectedFilter
-    
-    return matchesSearch && matchesFilter
+    return matchesSearch
   })
 
   // Group moments by date
@@ -118,6 +117,8 @@ export const CategoryDetails: React.FC = () => {
       const person = moments.find(m => m.person?.id === personId)?.person
       return { person, count }
     })
+
+  const hasActiveFilters = selectedRange !== 'all' || selectedAction !== 'both' || significanceOnly
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -160,6 +161,85 @@ export const CategoryDetails: React.FC = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Filters */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Range Pills */}
+            <div className="flex gap-1">
+              {RANGE_OPTIONS.map((option) => (
+                <Button
+                  key={option.label}
+                  variant={selectedRange === option.label ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setUrlState({ range: option.label })}
+                  className="h-8"
+                >
+                  {option.display}
+                </Button>
+              ))}
+            </div>
+
+            <div className="h-4 w-px bg-border" />
+
+            {/* Action Pills */}
+            <div className="flex gap-1">
+              {ACTION_OPTIONS.map((option) => (
+                <Button
+                  key={option.value}
+                  variant={selectedAction === option.value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setUrlState({ action: option.value as any })}
+                  className="h-8"
+                >
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+
+            <div className="h-4 w-px bg-border" />
+
+            {/* Significance Toggle */}
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={significanceOnly}
+                onCheckedChange={(checked) => setUrlState({ significant: checked })}
+                className="data-[state=checked]:bg-primary"
+              />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1 text-sm">
+                      Significant only
+                      <Info className="h-3 w-3 text-muted-foreground" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Only show moments marked as significant</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <>
+                <div className="h-4 w-px bg-border" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-8 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear filters
+                </Button>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stats */}
       <div className="grid md:grid-cols-4 gap-4 mb-6">
@@ -217,13 +297,6 @@ export const CategoryDetails: React.FC = () => {
                       className="pl-9 w-48"
                     />
                   </div>
-                  <Tabs value={selectedFilter} onValueChange={(value) => setSelectedFilter(value as 'all' | 'given' | 'received')}>
-                    <TabsList>
-                      <TabsTrigger value="all">All</TabsTrigger>
-                      <TabsTrigger value="given">Given</TabsTrigger>
-                      <TabsTrigger value="received">Received</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
                 </div>
               </div>
             </CardHeader>
@@ -339,15 +412,15 @@ export const CategoryDetails: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm">Balance</span>
-                  <span className="text-sm font-medium">
-                    {stats?.given && stats?.received 
-                      ? `${Math.round((stats.given / (stats.given + stats.received)) * 100)}% given`
-                      : 'No data'
-                    }
-                  </span>
-                </div>
+                 <div className="flex justify-between">
+                   <span className="text-sm">Balance</span>
+                   <span className="text-sm font-medium">
+                     {stats?.given && stats?.received 
+                       ? `${((stats.given / (stats.given + stats.received)) * 100).toFixed(1)}% given`
+                       : 'No data'
+                     }
+                   </span>
+                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Recent activity</span>
                   <span className="text-sm font-medium">

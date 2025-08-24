@@ -69,7 +69,14 @@ export const useCategories = () => {
   }
 }
 
-export const useCategoryDetails = (categoryId: string) => {
+export const useCategoryDetails = (
+  categoryId: string,
+  filters?: {
+    range?: string
+    action?: 'both' | 'given' | 'received'
+    significant?: boolean
+  }
+) => {
   const { data: category, isLoading: isLoadingCategory } = useQuery({
     queryKey: ['category', categoryId],
     queryFn: async () => {
@@ -86,16 +93,54 @@ export const useCategoryDetails = (categoryId: string) => {
   })
 
   const { data: moments = [], isLoading: isLoadingMoments } = useQuery({
-    queryKey: ['category-moments', categoryId],
+    queryKey: ['category-moments', categoryId, filters?.range, filters?.action, filters?.significant],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('moments')
         .select(`
           *,
           person:people(*)
         `)
         .eq('category_id', categoryId)
-        .order('happened_at', { ascending: false })
+
+      // Apply date range filter if specified
+      if (filters?.range && filters.range !== 'all') {
+        const now = new Date()
+        let startDate: Date
+        
+        switch (filters.range) {
+          case '30d':
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+            break
+          case '90d':
+            startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+            break
+          case '120d':
+            startDate = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000)
+            break
+          case '1y':
+            startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+            break
+          default:
+            startDate = new Date(0)
+        }
+        
+        query = query.gte('happened_at', startDate.toISOString())
+      }
+
+      // Apply action filter if specified
+      if (filters?.action && filters.action !== 'both') {
+        query = query.eq('action', filters.action)
+      }
+
+      // Apply significance filter if specified
+      if (filters?.significant) {
+        query = query.eq('significance', true)
+      }
+
+      query = query.order('happened_at', { ascending: false })
+
+      const { data, error } = await query
 
       if (error) throw error
       return data
@@ -104,12 +149,47 @@ export const useCategoryDetails = (categoryId: string) => {
   })
 
   const { data: stats } = useQuery({
-    queryKey: ['category-stats', categoryId],
+    queryKey: ['category-stats', categoryId, filters?.range, filters?.action, filters?.significant],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('moments')
         .select('action, person_id')
         .eq('category_id', categoryId)
+
+      // Apply same filters to stats
+      if (filters?.range && filters.range !== 'all') {
+        const now = new Date()
+        let startDate: Date
+        
+        switch (filters.range) {
+          case '30d':
+            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+            break
+          case '90d':
+            startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+            break
+          case '120d':
+            startDate = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000)
+            break
+          case '1y':
+            startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+            break
+          default:
+            startDate = new Date(0)
+        }
+        
+        query = query.gte('happened_at', startDate.toISOString())
+      }
+
+      if (filters?.action && filters.action !== 'both') {
+        query = query.eq('action', filters.action)
+      }
+
+      if (filters?.significant) {
+        query = query.eq('significance', true)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
 
