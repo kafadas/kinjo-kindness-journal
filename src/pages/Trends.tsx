@@ -29,15 +29,15 @@ const ACTION_OPTIONS = [
 const chartConfig = {
   given: {
     label: 'Kindness Given',
-    color: 'hsl(var(--primary))'
+    color: '#4f46e5' // indigo-600
   },
   received: {
     label: 'Kindness Received', 
-    color: 'hsl(var(--secondary))'
+    color: '#7c3aed' // violet-600
   },
   total: {
     label: 'Total Moments',
-    color: 'hsl(var(--primary))'
+    color: '#4f46e5' // indigo-600
   }
 }
 
@@ -373,7 +373,7 @@ export const Trends: React.FC = () => {
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[250px] sm:h-[300px]">
-            <LineChart 
+            <AreaChart 
               data={data.seriesDaily}
               onClick={(event) => {
                 if (event?.activeLabel) {
@@ -381,6 +381,16 @@ export const Trends: React.FC = () => {
                 }
               }}
             >
+              <defs>
+                <linearGradient id="givenGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.24} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0.05} />
+                </linearGradient>
+                <linearGradient id="receivedGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.24} />
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.05} />
+                </linearGradient>
+              </defs>
               <XAxis 
                 dataKey="date"
                 tickFormatter={(value) => format(parseISO(value), 'MMM d')}
@@ -398,7 +408,20 @@ export const Trends: React.FC = () => {
                       const dateStr = format(parseISO(label as string), 'MMM d')
                       return (
                         <div className="bg-background border rounded-lg shadow-lg p-3">
-                          <p className="font-medium">{dateStr} — Given {data.given} · Received {data.received} · Total {data.total}</p>
+                          <p className="font-medium mb-2">{dateStr}</p>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
+                              <span>Given: {data.given}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full bg-violet-600"></div>
+                              <span>Received: {data.received}</span>
+                            </div>
+                            <div className="flex items-center gap-2 pt-1 border-t">
+                              <span className="font-medium">Total: {data.total}</span>
+                            </div>
+                          </div>
                         </div>
                       );
                     }
@@ -406,29 +429,58 @@ export const Trends: React.FC = () => {
                   return null;
                 }}
               />
-              {/* Always show both lines when action is 'both' or individual lines for specific actions */}
+              {/* Always show both areas when action is 'both' or individual areas for specific actions */}
               {(selectedAction === 'both' || selectedAction === 'given') && (
-                <Line
+                <Area
                   type="monotone"
                   dataKey="given"
-                  stroke="hsl(var(--primary))"
+                  stackId="1"
+                  stroke="#4f46e5"
+                  fill="url(#givenGradient)"
                   strokeWidth={2}
-                  dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 3 }}
-                  activeDot={{ r: 5, stroke: 'hsl(var(--primary))', strokeWidth: 2 }}
                 />
               )}
               {(selectedAction === 'both' || selectedAction === 'received') && (
-                <Line
+                <Area
                   type="monotone"
                   dataKey="received"
-                  stroke="hsl(var(--secondary))"
+                  stackId="1"
+                  stroke="#7c3aed"
+                  fill="url(#receivedGradient)"
                   strokeWidth={2}
-                  dot={{ fill: 'hsl(var(--secondary))', strokeWidth: 2, r: 3 }}
-                  activeDot={{ r: 5, stroke: 'hsl(var(--secondary))', strokeWidth: 2 }}
                 />
               )}
-              <ChartLegend content={<ChartLegendContent />} />
-            </LineChart>
+              <ChartLegend 
+                content={({ payload }) => {
+                  if (!payload) return null;
+                  
+                  const visibleLegendItems = payload.filter(item => {
+                    if (selectedAction === 'both') return true;
+                    if (selectedAction === 'given') return item.dataKey === 'given';
+                    if (selectedAction === 'received') return item.dataKey === 'received';
+                    return false;
+                  });
+
+                  return (
+                    <div className="flex justify-center gap-6 mt-4 text-sm">
+                      {visibleLegendItems.map((item, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ 
+                              backgroundColor: item.dataKey === 'given' ? '#4f46e5' : '#7c3aed'
+                            }}
+                          />
+                          <span className="text-muted-foreground">
+                            {item.dataKey === 'given' ? 'Kindness Given' : 'Kindness Received'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }}
+              />
+            </AreaChart>
           </ChartContainer>
           <p className="text-xs text-muted-foreground mt-2 text-center">
             Charts respect the filters above (Action, Significant). Click any point to view moments from that day.
