@@ -15,7 +15,6 @@ interface CategoryData {
   category_id: string
   name: string
   pct: number
-  delta_pct: number
 }
 
 interface MedianData {
@@ -76,6 +75,10 @@ export const useTrends = (options: UseTrendsOptions) => {
           chartDateRange = dateRange
         }
 
+        // Get user timezone for deterministic bucketing
+        const { data: userTzData } = await supabase.rpc('user_tz', { p_user: user.id })
+        const userTz = userTzData || 'UTC'
+
         // Call the three RPC functions in parallel
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
           supabase.rpc('daily_moment_counts', {
@@ -83,14 +86,16 @@ export const useTrends = (options: UseTrendsOptions) => {
             p_start: startDateStr,
             p_end: endDateStr,
             p_action: options.action,
-            p_significant_only: options.significance
+            p_significant_only: options.significance,
+            p_tz: userTz
           }),
           supabase.rpc('category_share_delta', {
             p_user: user.id,
             p_start: startDateStr,
             p_end: endDateStr,
             p_action: options.action,
-            p_significant_only: options.significance
+            p_significant_only: options.significance,
+            p_tz: userTz
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,
@@ -108,17 +113,16 @@ export const useTrends = (options: UseTrendsOptions) => {
 
         // Transform the data to match expected format
         const seriesDaily: DailyData[] = (dailyResult.data || []).map(row => ({
-          date: row.d,
-          total: row.total,
-          given: row.given,
-          received: row.received
+          date: row.day,
+          total: row.total_count,
+          given: row.given_count,
+          received: row.received_count
         }))
 
         const categoryShare: CategoryData[] = (categoryResult.data || []).map(row => ({
           category_id: row.category_id,
-          name: row.name,
-          pct: parseFloat(row.pct.toString()) * 100, // Convert to percentage
-          delta_pct: parseFloat(row.delta_pct.toString()) * 100
+          name: row.category_name,
+          pct: parseFloat(row.pct.toString()) // Already in percentage from function
         }))
 
         const medianGaps: MedianData[] = (medianResult.data || []).map(row => ({

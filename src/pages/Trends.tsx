@@ -491,16 +491,6 @@ export const Trends: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
                         <span className="truncate">{category.name} — {absoluteCount} ({formatPct1(category.pct / 100)})</span>
-                        {category.delta_pct !== 0 && (
-                          <span 
-                            className={cn(
-                              "text-xs flex-shrink-0",
-                              category.delta_pct > 0 ? "text-green-600" : "text-red-600"
-                            )}
-                          >
-                            ({formatDelta(category.delta_pct / 100)} vs prev window)
-                          </span>
-                        )}
                       </div>
                     </div>
                   </div>

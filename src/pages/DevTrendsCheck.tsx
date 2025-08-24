@@ -114,14 +114,16 @@ export const DevTrendsCheck: React.FC = () => {
             p_start: startStr,
             p_end: endStr,
             p_action: selectedAction,
-            p_significant_only: significanceOnly
+            p_significant_only: significanceOnly,
+            p_tz: 'UTC'
           }),
           supabase.rpc('category_share_delta', {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
             p_action: selectedAction,
-            p_significant_only: significanceOnly
+            p_significant_only: significanceOnly,
+            p_tz: 'UTC'
           }),
           supabase.rpc('median_gap_by_category', {
             p_user: user.id,
@@ -140,8 +142,7 @@ export const DevTrendsCheck: React.FC = () => {
           category: { 
             data: categoryResult.data?.slice(0, 5)?.map(row => ({
               ...row,
-              pct: row.pct ? parseFloat(row.pct.toString()) : row.pct,
-              delta_pct: row.delta_pct ? parseFloat(row.delta_pct.toString()) : row.delta_pct
+              pct: row.pct ? parseFloat(row.pct.toString()) : row.pct
             })), 
             error: categoryResult.error 
           },
@@ -177,7 +178,8 @@ export const DevTrendsCheck: React.FC = () => {
           p_start: startStr,
           p_end: endStr,
           p_action: selectedAction,
-          p_significant_only: significanceOnly
+          p_significant_only: significanceOnly,
+          p_tz: 'UTC'
         })
 
         if (dailyResult.error) throw dailyResult.error
@@ -671,8 +673,7 @@ export const DevTrendsCheck: React.FC = () => {
                         {JSON.stringify(
                           rpcResults?.category.data?.map(row => ({
                             ...row,
-                            pct_formatted: row.pct ? formatPct1(row.pct) : 'N/A',
-                            delta_formatted: row.delta_pct ? formatDelta(row.delta_pct) : 'N/A'
+                           pct_formatted: row.pct ? formatPct1(row.pct) : 'N/A'
                           })), 
                           null, 
                           2
