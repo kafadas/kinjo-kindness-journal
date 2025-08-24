@@ -34,6 +34,8 @@ import type { MomentWithRelations } from '@/lib/db/types';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { usePeople } from '@/hooks/usePeople';
 import { useCategories } from '@/hooks/useCategories';
+import { getRange, RANGE_OPTIONS, type DateRangeLabel } from '@/lib/dateRange';
+import { cn } from '@/lib/utils';
 
 export const Timeline: React.FC = () => {
   const { isDiscreetMode } = useDiscreetMode();
@@ -193,6 +195,98 @@ export const Timeline: React.FC = () => {
     setSearchParams(new URLSearchParams(), { replace: true });
     setAppliedFilters({});
   }, [setSearchParams]);
+
+  // Quick filter handlers for header chips
+  const setQuickDateRange = useCallback((rangeLabel: DateRangeLabel) => {
+    const range = getRange(rangeLabel);
+    const newFilters = { ...draftFilters };
+    if (range) {
+      newFilters.dateRange = { from: range.start, to: range.end };
+    } else {
+      delete newFilters.dateRange;
+    }
+    setDraftFilters(newFilters);
+    
+    // Auto-apply quick filters
+    setTimeout(() => {
+      const params = new URLSearchParams();
+      if (range) {
+        params.set('from', format(range.start, 'yyyy-MM-dd'));
+        params.set('to', format(startOfDay(range.end), 'yyyy-MM-dd'));
+      }
+      if (newFilters.action) params.set('action', newFilters.action);
+      if (newFilters.significance) params.set('significant', '1');
+      if (newFilters.search) params.set('q', newFilters.search);
+      if (newFilters.categoryId && newFilters.categoryId !== 'all') params.set('categoryId', newFilters.categoryId);
+      if (newFilters.personId) params.set('personId', newFilters.personId);
+      
+      setSearchParams(params, { replace: true });
+      setAppliedFilters({ ...newFilters, dateRange: range ? { from: range.start, to: range.end } : undefined });
+    }, 0);
+  }, [draftFilters, setSearchParams]);
+
+  const setQuickAction = useCallback((action: 'given' | 'received' | undefined) => {
+    const newFilters = { ...draftFilters, action };
+    setDraftFilters(newFilters);
+    
+    // Auto-apply quick filters
+    setTimeout(() => {
+      const params = new URLSearchParams();
+      if (newFilters.dateRange?.from) {
+        params.set('from', format(newFilters.dateRange.from, 'yyyy-MM-dd'));
+        params.set('to', format(startOfDay(newFilters.dateRange.to), 'yyyy-MM-dd'));
+      }
+      if (action) params.set('action', action);
+      if (newFilters.significance) params.set('significant', '1');
+      if (newFilters.search) params.set('q', newFilters.search);
+      if (newFilters.categoryId && newFilters.categoryId !== 'all') params.set('categoryId', newFilters.categoryId);
+      if (newFilters.personId) params.set('personId', newFilters.personId);
+      
+      setSearchParams(params, { replace: true });
+      setAppliedFilters(newFilters);
+    }, 0);
+  }, [draftFilters, setSearchParams]);
+
+  const setQuickSignificance = useCallback((significance: boolean) => {
+    const newFilters = { ...draftFilters, significance: significance ? true : undefined };
+    setDraftFilters(newFilters);
+    
+    // Auto-apply quick filters
+    setTimeout(() => {
+      const params = new URLSearchParams();
+      if (newFilters.dateRange?.from) {
+        params.set('from', format(newFilters.dateRange.from, 'yyyy-MM-dd'));
+        params.set('to', format(startOfDay(newFilters.dateRange.to), 'yyyy-MM-dd'));
+      }
+      if (newFilters.action) params.set('action', newFilters.action);
+      if (significance) params.set('significant', '1');
+      if (newFilters.search) params.set('q', newFilters.search);
+      if (newFilters.categoryId && newFilters.categoryId !== 'all') params.set('categoryId', newFilters.categoryId);
+      if (newFilters.personId) params.set('personId', newFilters.personId);
+      
+      setSearchParams(params, { replace: true });
+      setAppliedFilters(newFilters);
+    }, 0);
+  }, [draftFilters, setSearchParams]);
+
+  // Get current quick filter states
+  const getCurrentDateRange = useCallback((): DateRangeLabel => {
+    if (!appliedFilters.dateRange) return 'all';
+    
+    // Check if current range matches any of the predefined ranges
+    for (const option of RANGE_OPTIONS) {
+      if (option.label === 'all') continue;
+      const range = getRange(option.label);
+      if (range && 
+          appliedFilters.dateRange.from.getTime() === range.start.getTime() &&
+          Math.abs(appliedFilters.dateRange.to.getTime() - range.end.getTime()) < 60000) { // Allow 1 minute tolerance
+        return option.label;
+      }
+    }
+    return 'all'; // Custom range, show as 'all'
+  }, [appliedFilters.dateRange]);
+
+  const hasQuickFilters = appliedFilters.action || appliedFilters.significance || appliedFilters.dateRange;
 
   // Keyboard shortcuts
   useKeyboardShortcuts(
@@ -452,6 +546,79 @@ export const Timeline: React.FC = () => {
             className="pl-9"
           />
         </div>
+      </div>
+
+      {/* Header Filter Chips */}
+      <div className="flex flex-wrap gap-2 mb-4 p-3 bg-muted/30 rounded-lg">
+        {/* Date Range Chips */}
+        <div className="flex gap-1 flex-wrap">
+          {RANGE_OPTIONS.map(option => (
+            <Button
+              key={option.label}
+              variant={getCurrentDateRange() === option.label ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setQuickDateRange(option.label)}
+              className="text-xs px-2 h-7"
+            >
+              {option.display}
+            </Button>
+          ))}
+        </div>
+        
+        {/* Action Chips */}
+        <div className="flex gap-1">
+          <Button
+            variant={!appliedFilters.action ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setQuickAction(undefined)}
+            className="text-xs px-2 h-7"
+          >
+            Both
+          </Button>
+          <Button
+            variant={appliedFilters.action === 'given' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setQuickAction('given')}
+            className="text-xs px-2 h-7"
+          >
+            Given
+          </Button>
+          <Button
+            variant={appliedFilters.action === 'received' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setQuickAction('received')}
+            className="text-xs px-2 h-7"
+          >
+            Received
+          </Button>
+        </div>
+
+        {/* Significance Toggle */}
+        <Button
+          variant={appliedFilters.significance ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setQuickSignificance(!appliedFilters.significance)}
+          className="text-xs px-2 h-7"
+        >
+          <Star className="h-3 w-3 mr-1" />
+          Significant
+        </Button>
+
+        {/* Clear Quick Filters */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleClearFilters}
+          disabled={!hasQuickFilters}
+          className={cn(
+            "text-xs px-2 h-7",
+            hasQuickFilters 
+              ? "text-muted-foreground hover:text-foreground" 
+              : "text-muted-foreground/50 cursor-not-allowed"
+          )}
+        >
+          Clear filters
+        </Button>
       </div>
 
       {/* Filter Summary */}
