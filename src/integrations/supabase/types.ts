@@ -453,6 +453,22 @@ export type Database = {
           name: string
         }[]
       }
+      category_share_delta: {
+        Args: {
+          p_action?: string
+          p_end: string
+          p_significant_only?: boolean
+          p_start: string
+          p_tz?: string
+          p_user: string
+        }
+        Returns: {
+          category_id: string
+          category_name: string
+          cnt: number
+          pct: number
+        }[]
+      }
       category_share_delta_v1: {
         Args: {
           p_action: string
@@ -486,6 +502,22 @@ export type Database = {
           p_person_id?: string
         }
         Returns: string
+      }
+      daily_moment_counts: {
+        Args: {
+          p_action?: string
+          p_end?: string
+          p_significant_only?: boolean
+          p_start?: string
+          p_tz?: string
+          p_user: string
+        }
+        Returns: {
+          d: string
+          given: number
+          received: number
+          total: number
+        }[]
       }
       daily_moment_counts_v1: {
         Args: {

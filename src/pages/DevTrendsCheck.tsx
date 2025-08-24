@@ -109,7 +109,7 @@ export const DevTrendsCheck: React.FC = () => {
 
       try {
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
-          supabase.rpc('daily_moment_counts_v1', {
+          supabase.rpc('daily_moment_counts', {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
@@ -117,7 +117,7 @@ export const DevTrendsCheck: React.FC = () => {
             p_significant_only: significanceOnly,
             p_tz: 'UTC'
           }),
-          supabase.rpc('category_share_delta_v1', {
+          supabase.rpc('category_share_delta', {
             p_user: user.id,
             p_start: startStr,
             p_end: endStr,
@@ -143,7 +143,7 @@ export const DevTrendsCheck: React.FC = () => {
             data: categoryResult.data?.slice(0, 5)?.map(row => ({
               ...row,
               // Map new function fields for backwards compatibility in display
-              pct: row.share ? parseFloat(row.share.toString()) : row.share
+              pct: row.pct ? parseFloat(row.pct.toString()) : row.pct
             })), 
             error: categoryResult.error 
           },
@@ -174,7 +174,7 @@ export const DevTrendsCheck: React.FC = () => {
 
       try {
         // Get trends data (from RPC)
-        const dailyResult = await supabase.rpc('daily_moment_counts_v1', {
+        const dailyResult = await supabase.rpc('daily_moment_counts', {
           p_user: user.id,
           p_start: startStr,
           p_end: endStr,
@@ -251,8 +251,8 @@ export const DevTrendsCheck: React.FC = () => {
             return {
               date: trendsRow.d,
               trendsTotal: trendsRow.total,
-              trendsGiven: trendsRow.given_count,
-              trendsReceived: trendsRow.received_count,
+              trendsGiven: trendsRow.given,
+              trendsReceived: trendsRow.received,
               timelineTotal: totalCount || 0,
               timelineGiven: givenCount,
               timelineReceived: receivedCount,
@@ -488,7 +488,7 @@ export const DevTrendsCheck: React.FC = () => {
               Chart Parity Check: Trends vs Timeline
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              Comparing RPC daily_moment_counts_v1 vs direct timeline queries for the same filters
+              Comparing RPC daily_moment_counts vs direct timeline queries for the same filters
             </p>
           </CardHeader>
           <CardContent>
@@ -591,7 +591,7 @@ export const DevTrendsCheck: React.FC = () => {
           <CardContent className="space-y-6">
             {rpcLoading ? (
               <div className="space-y-4">
-                {['daily_moment_counts_v1', 'category_share_delta_v1', 'median_gap_by_category'].map((name) => (
+                {['daily_moment_counts', 'category_share_delta', 'median_gap_by_category'].map((name) => (
                   <div key={name}>
                     <Skeleton className="h-6 w-48 mb-2" />
                     <Skeleton className="h-20 w-full" />
@@ -617,8 +617,8 @@ export const DevTrendsCheck: React.FC = () => {
               <>
                 {/* Daily Counts */}
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge>daily_moment_counts_v1</Badge>
+                   <div className="flex items-center gap-2 mb-2">
+                     <Badge>daily_moment_counts</Badge>
                     {rpcResults?.daily.error ? (
                       <Badge variant="destructive">
                         Error: {rpcResults.daily.error.code || 'Unknown'} 
@@ -648,8 +648,8 @@ export const DevTrendsCheck: React.FC = () => {
 
                 {/* Category Share */}
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge>category_share_delta_v1</Badge>
+                   <div className="flex items-center gap-2 mb-2">
+                     <Badge>category_share_delta</Badge>
                     {rpcResults?.category.error ? (
                       <Badge variant="destructive">
                         Error: {rpcResults.category.error.code || 'Unknown'}
