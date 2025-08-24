@@ -29,6 +29,7 @@ import { CaptureModal } from '@/components/modals/CaptureModal';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LoadingCard, LoadingGrid } from '@/components/ui/loading-card';
 import { formatDistanceToNow, format, endOfDay, startOfDay } from 'date-fns';
+import { formatRelativeDate } from '@/lib/formatters';
 import { toast } from 'sonner';
 import type { MomentWithRelations } from '@/lib/db/types';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -119,6 +120,7 @@ export const Timeline: React.FC = () => {
 
   const { 
     moments, 
+    userTimezone,
     isLoading, 
     hasNextPage, 
     isFetchingNextPage,
@@ -419,7 +421,7 @@ export const Timeline: React.FC = () => {
                 )}
 
                 <span className="text-xs text-muted-foreground ml-auto" title={format(new Date(moment.happened_at), 'PPP p')}>
-                  {formatDistanceToNow(new Date(moment.happened_at), { addSuffix: true })}
+                  {formatRelativeDate(moment.happened_at, userTimezone)}
                 </span>
               </div>
 

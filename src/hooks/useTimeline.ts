@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import type { MomentWithRelations } from '@/lib/db/types'
@@ -20,6 +20,18 @@ export interface TimelineFilters {
 export const useTimeline = (filters: TimelineFilters = {}, limit = 20) => {
   const queryClient = useQueryClient()
 
+  // Get user timezone
+  const { data: userTimezone } = useQuery({
+    queryKey: ['user-timezone'],
+    queryFn: async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('timezone')
+        .single()
+      return profile?.timezone || 'UTC'
+    }
+  })
+
   const { 
     data, 
     isLoading, 
@@ -30,10 +42,6 @@ export const useTimeline = (filters: TimelineFilters = {}, limit = 20) => {
   } = useInfiniteQuery({
     queryKey: ['timeline', filters, limit],
     queryFn: async ({ pageParam = 0 }) => {
-      // Get user timezone for proper date filtering
-      const { data: userTz } = await supabase.rpc('user_tz', { p_user: (await supabase.auth.getUser()).data.user?.id })
-      const timezone = userTz || 'UTC'
-      
       let query = supabase
         .from('moments')
         .select(`
@@ -67,10 +75,6 @@ export const useTimeline = (filters: TimelineFilters = {}, limit = 20) => {
 
       // Timezone-aware date filtering for inclusive date ranges
       if (filters.dateRange) {
-        const fromStr = filters.dateRange.from.toISOString().split('T')[0] // YYYY-MM-DD
-        const toStr = filters.dateRange.to.toISOString().split('T')[0] // YYYY-MM-DD
-        
-        // Use timezone-aware date comparison: happened_at AT TIME ZONE user_tz between from::date and to::date  
         query = query.gte('happened_at', filters.dateRange.from.toISOString())
         query = query.lte('happened_at', filters.dateRange.to.toISOString())
       }
@@ -155,6 +159,7 @@ export const useTimeline = (filters: TimelineFilters = {}, limit = 20) => {
 
   return {
     moments,
+    userTimezone: userTimezone || 'UTC',
     isLoading,
     error,
     hasNextPage,
