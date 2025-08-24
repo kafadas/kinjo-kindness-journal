@@ -59,37 +59,34 @@ export const DevTrendsCheck: React.FC = () => {
     queryFn: async () => {
       if (!user?.id) return null
       
-      const ranges: DateRangeLabel[] = ['30d', '90d', '120d', '1y']
+      const ranges: DateRangeLabel[] = ['all', '30d', '90d', '120d', '1y']
       const results = await Promise.all(
         ranges.map(async (rangeLabel) => {
-          const { start, end } = getRange(rangeLabel)
-          const { count, error } = await supabase
+          const dateRange = getRange(rangeLabel)
+          
+          let query = supabase
             .from('moments')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
-            .gte('happened_at', start.toISOString())
-            .lte('happened_at', end.toISOString())
-            .then(({ count, error: baseError }) => {
-              // Apply filters
-              if (baseError) return { count: null, error: baseError }
-              
-              let query = supabase
-                .from('moments')
-                .select('*', { count: 'exact', head: true })
-                .eq('user_id', user.id)
-                .gte('happened_at', start.toISOString())
-                .lte('happened_at', end.toISOString())
-              
-              if (selectedAction !== 'both') {
-                query = query.eq('action', selectedAction)
-              }
-              
-              if (significanceOnly) {
-                query = query.eq('significance', true)
-              }
-              
-              return query
-            })
+          
+          // Apply date filter only if not "all"
+          if (dateRange) {
+            query = query
+              .gte('happened_at', dateRange.start.toISOString())
+              .lte('happened_at', dateRange.end.toISOString())
+          }
+          
+          // Apply action filter
+          if (selectedAction !== 'both') {
+            query = query.eq('action', selectedAction)
+          }
+          
+          // Apply significance filter
+          if (significanceOnly) {
+            query = query.eq('significance', true)
+          }
+          
+          const { count, error } = await query
           
           return { range: rangeLabel, count, error }
         })
@@ -106,9 +103,9 @@ export const DevTrendsCheck: React.FC = () => {
     queryFn: async () => {
       if (!user?.id) return null
       
-      const { start, end } = getRange(selectedRange)
-      const startStr = format(start, 'yyyy-MM-dd')
-      const endStr = format(end, 'yyyy-MM-dd')
+      const dateRange = getRange(selectedRange)
+      const startStr = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : null
+      const endStr = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : null
 
       try {
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
@@ -255,14 +252,14 @@ export const DevTrendsCheck: React.FC = () => {
           variant="ghost"
           size="sm"
           onClick={() => {
-            setSelectedRange('30d')
+            setSelectedRange('all')
             setSelectedAction('both')
             setSignificanceOnly(false)
           }}
-          disabled={selectedRange === '30d' && selectedAction === 'both' && !significanceOnly}
+          disabled={selectedRange === 'all' && selectedAction === 'both' && !significanceOnly}
           className={cn(
             "text-xs sm:text-sm px-2 sm:px-3",
-            selectedRange !== '30d' || selectedAction !== 'both' || significanceOnly
+            selectedRange !== 'all' || selectedAction !== 'both' || significanceOnly
               ? "text-muted-foreground hover:text-foreground" 
               : "text-muted-foreground/50 cursor-not-allowed"
           )}
@@ -319,8 +316,10 @@ export const DevTrendsCheck: React.FC = () => {
               <code className="text-xs bg-muted p-3 rounded block">
                 WHERE user_id = '{user.id}'
                 {(() => {
-                  const { start, end } = getRange(selectedRange)
-                  return ` AND happened_at::date BETWEEN '${format(start, 'yyyy-MM-dd')}' AND '${format(end, 'yyyy-MM-dd')}'`
+                  const dateRange = getRange(selectedRange)
+                  return dateRange 
+                    ? ` AND happened_at::date BETWEEN '${format(dateRange.start, 'yyyy-MM-dd')}' AND '${format(dateRange.end, 'yyyy-MM-dd')}'`
+                    : ' -- (no date filter for "all")'
                 })()}
                 {selectedAction !== 'both' && ` AND action = '${selectedAction}'`}
                 {significanceOnly && ` AND significance = true`}

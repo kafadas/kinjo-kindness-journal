@@ -487,6 +487,13 @@ export type Database = {
           total: number
         }[]
       }
+      get_user_moment_date_range: {
+        Args: { p_user: string }
+        Returns: {
+          max_date: string
+          min_date: string
+        }[]
+      }
       given_received_by_category: {
         Args: { _from: string; _to: string; _user: string }
         Returns: {

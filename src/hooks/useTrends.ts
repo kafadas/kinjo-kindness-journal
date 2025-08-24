@@ -28,6 +28,7 @@ interface TrendsData {
   seriesDaily: DailyData[]
   categoryShare: CategoryData[]
   medianGaps: MedianData[]
+  dateRange?: { start: Date; end: Date } | null
 }
 
 interface UseTrendsOptions {
@@ -56,6 +57,25 @@ export const useTrends = (options: UseTrendsOptions) => {
       }
 
       try {
+        // For "all" range, get the user's date bounds for chart domain
+        let chartDateRange: { start: Date; end: Date } | null = null
+        if (options.range === 'all') {
+          const { data: rangeData, error: rangeError } = await supabase.rpc('get_user_moment_date_range', {
+            p_user: user.id
+          })
+          
+          if (rangeError) {
+            console.warn('Could not fetch date range:', rangeError)
+          } else if (rangeData && rangeData.length > 0 && rangeData[0].min_date && rangeData[0].max_date) {
+            chartDateRange = {
+              start: new Date(rangeData[0].min_date + 'T00:00:00'),
+              end: new Date(rangeData[0].max_date + 'T23:59:59')
+            }
+          }
+        } else if (dateRange) {
+          chartDateRange = dateRange
+        }
+
         // Call the three RPC functions in parallel
         const [dailyResult, categoryResult, medianResult] = await Promise.all([
           supabase.rpc('daily_moment_counts', {
@@ -110,7 +130,8 @@ export const useTrends = (options: UseTrendsOptions) => {
         return {
           seriesDaily,
           categoryShare,
-          medianGaps
+          medianGaps,
+          dateRange: chartDateRange
         }
       } catch (error) {
         console.error('Trends data error:', error)
