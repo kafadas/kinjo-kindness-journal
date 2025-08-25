@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { BookOpen, RefreshCw, Calendar, Lightbulb } from 'lucide-react';
+import { BookOpen, RefreshCw, Calendar, Lightbulb, Sparkles } from 'lucide-react';
 import { useReflections } from '@/hooks/useReflections';
 import { useDiscreetMode } from '@/contexts/DiscreetModeContext';
 import { DiscreetText } from '@/components/ui/DiscreetText';
@@ -47,7 +47,7 @@ export const Reflection: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (error && !reflection) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
         <div className="mb-6">
@@ -130,6 +130,14 @@ export const Reflection: React.FC = () => {
                   {regenerating ? 'Regenerating...' : 'Regenerate'}
                 </Button>
               </div>
+              {reflection.source === 'fallback' && (
+                <div className="mt-2">
+                  <Badge variant="secondary" className="text-xs">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Generated without AI — using helpful rules
+                  </Badge>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
