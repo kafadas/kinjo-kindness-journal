@@ -20,6 +20,12 @@ import {
 import { DiscreetText } from '@/components/ui/DiscreetText';
 import { format } from 'date-fns';
 import { DateRangeBadge } from '@/components/ui/DateRangeBadge';
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -49,7 +55,7 @@ const KindnessBalanceBar: React.FC<{ given: number; received: number }> = ({ giv
           style={{ width: `${givenPercent}%` }}
         />
         <div 
-          className="bg-secondary transition-all duration-300" 
+          className="bg-primary/60 transition-all duration-300" 
           style={{ width: `${receivedPercent}%` }}
         />
       </div>
@@ -57,52 +63,103 @@ const KindnessBalanceBar: React.FC<{ given: number; received: number }> = ({ giv
   );
 };
 
-// Activity Dots Component
-const ActivityDots: React.FC<{ activeDays?: number; totalDays?: number }> = ({ 
-  activeDays = 0, 
-  totalDays = 7 
-}) => {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+// Interactive Weekday Dots Component with real data and tooltips
+const WeekdayDots: React.FC<{ 
+  dailyData: Array<{total: number; given: number; received: number}>;
+}> = ({ dailyData }) => {
+  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  
+  // Calculate max count for scaling
+  const maxCount = Math.max(...dailyData.map(d => d.total), 1);
   
   return (
-    <div className="flex items-center justify-between gap-2">
-      {days.map((day, index) => {
-        const isActive = index < activeDays;
-        return (
-          <div key={day} className="flex flex-col items-center gap-1">
-            <div
-              className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
-                isActive 
-                  ? 'bg-primary border-primary' 
-                  : 'bg-muted border-muted-foreground/20'
-              }`}
-              aria-label={`${day}: ${isActive ? 'active' : 'quiet'}`}
-            />
-            <span className="text-xs text-muted-foreground font-medium">{day}</span>
-          </div>
-        );
-      })}
-    </div>
+    <TooltipProvider>
+      <div className="flex items-center justify-between gap-2">
+        {weekdays.map((day, index) => {
+          const dayData = dailyData[index] || { total: 0, given: 0, received: 0 };
+          const hasActivity = dayData.total > 0;
+          
+          // Scale size and opacity based on activity
+          const scale = hasActivity ? Math.max(0.6, dayData.total / maxCount) : 0.3;
+          const opacity = hasActivity ? Math.max(0.7, dayData.total / maxCount) : 0.3;
+          
+          const tooltipContent = hasActivity 
+            ? `${day} — ${dayData.total} moments (${dayData.given} given, ${dayData.received} received)`
+            : `${day} — No activity`;
+          
+          return (
+            <div key={day} className="flex flex-col items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className={`w-6 h-6 rounded-full border-2 transition-all duration-200 cursor-help ${
+                      hasActivity 
+                        ? 'bg-primary border-primary text-primary-foreground shadow-md' 
+                        : 'bg-muted border-muted-foreground/20'
+                    }`}
+                    style={{ 
+                      transform: `scale(${scale})`,
+                      opacity: opacity 
+                    }}
+                    aria-label={`${day}: ${hasActivity ? `${dayData.total} moments` : 'no activity'}`}
+                  >
+                    {hasActivity && (
+                      <div className="w-full h-full flex items-center justify-center text-xs font-medium">
+                        {dayData.total}
+                      </div>
+                    )}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="bg-background border text-foreground">
+                  <p className="text-sm">{tooltipContent}</p>
+                </TooltipContent>
+              </Tooltip>
+              <span className="text-xs text-muted-foreground font-medium">{day}</span>
+            </div>
+          );
+        })}
+      </div>
+    </TooltipProvider>
   );
 };
 
-// 7d Layout: Weekly check-in
-export const WeeklyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflection }) => {
-  const { given = 0, received = 0, total = 0 } = reflection.computed || {};
+// 7d Layout: Weekly check-in with real weekday data
+export const WeeklyLayout: React.FC<{ reflection: ReflectionData; dateRange?: any }> = ({ reflection, dateRange }) => {
+  const computed = reflection.computed || {};
+  const givenCount = computed.given_count || 0;
+  const receivedCount = computed.received_count || 0;
+  const totalMoments = computed.total_moments || 0;
+  const activeDays = computed.active_days || 0;
+  
+  // Extract daily weekday data (array of 7 objects for Mon-Sun)
+  const dailyWeekdayData = computed.daily_by_weekday || Array(7).fill({ total: 0, given: 0, received: 0 });
+  
+  // Transform backend data to expected format
+  const weekdayData = dailyWeekdayData.map((day: any) => ({
+    total: day?.total || 0,
+    given: day?.given || 0,
+    received: day?.received || 0
+  }));
   
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-2">Weekly Check-in</h2>
         <p className="text-muted-foreground">A gentle look at your week of kindness</p>
-        <div className="mt-3 flex justify-center">
+        <div className="mt-3 flex justify-center gap-2">
+          {dateRange && (
+            <DateRangeBadge 
+              start={dateRange?.startDate} 
+              end={dateRange?.endDate} 
+            />
+          )}
           <Badge variant={reflection.model === 'ai' ? 'default' : 'secondary'}>
-            {reflection.model === 'ai' ? 'AI Enhanced' : 'Rule-based'}
+            {reflection.model === 'ai' ? 'AI-assisted' : 'Rule-based'}
           </Badge>
         </div>
       </div>
 
-      {/* Mini Kindness Balance */}
+      {/* Kindness Balance using real data */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -111,11 +168,11 @@ export const WeeklyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflect
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <KindnessBalanceBar given={given} received={received} />
+          <KindnessBalanceBar given={givenCount} received={receivedCount} />
         </CardContent>
       </Card>
 
-      {/* Activity dots */}
+      {/* Interactive weekday dots with real data */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -123,8 +180,11 @@ export const WeeklyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflect
             This Week's Activity
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ActivityDots activeDays={reflection.computed?.activeDays} />
+        <CardContent className="space-y-3">
+          <WeekdayDots dailyData={weekdayData} />
+          <p className="text-xs text-muted-foreground text-center">
+            Hover over dots to see daily breakdown • Size reflects activity level
+          </p>
         </CardContent>
       </Card>
 
