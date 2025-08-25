@@ -31,7 +31,15 @@ export const useTrendsUrlState = () => {
   }
 
   const clearFilters = () => {
-    setSearchParams(new URLSearchParams(), { replace: true })
+    const currentState = getUrlState()
+    const params = new URLSearchParams()
+    
+    // Preserve current range if it's not 'all'
+    if (currentState.range !== 'all') {
+      params.set('range', currentState.range)
+    }
+    
+    setSearchParams(params, { replace: true })
   }
 
   return {

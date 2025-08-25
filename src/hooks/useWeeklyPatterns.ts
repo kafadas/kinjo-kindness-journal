@@ -44,16 +44,16 @@ export const useWeeklyPatterns = (options: UseWeeklyPatternsOptions) => {
       } else {
         let daysBack: number
         switch (options.range) {
+          case '7d':
+            daysBack = 6
+            break
           case '30d':
             daysBack = 29
             break
           case '90d':
             daysBack = 89
             break
-          case '120d':
-            daysBack = 119
-            break
-          case '1y':
+          case '365d':
             daysBack = 364
             break
           default:

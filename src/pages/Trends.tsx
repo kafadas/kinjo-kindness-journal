@@ -109,7 +109,7 @@ export const Trends: React.FC = () => {
     clearFilters()
   }
 
-  const hasActiveFilters = selectedRange !== 'all' || selectedAction !== 'both' || significanceOnly
+  const hasActiveFilters = selectedAction !== 'both' || significanceOnly
 
   const handleCategoryClick = (categoryId: string) => {
     const params = new URLSearchParams()
@@ -539,7 +539,7 @@ export const Trends: React.FC = () => {
                   
                   return (totalMoments / daysDiff).toFixed(1)
                 }
-                const days = selectedRange === '1y' ? 365 : parseInt(selectedRange.replace('d', ''))
+                const days = selectedRange === '365d' ? 365 : parseInt(selectedRange.replace('d', ''))
                 return totalMoments > 0 ? (totalMoments / days).toFixed(1) : '0'
               })()}
             </div>

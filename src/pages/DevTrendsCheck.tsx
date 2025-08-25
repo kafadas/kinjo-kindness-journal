@@ -59,7 +59,7 @@ export const DevTrendsCheck: React.FC = () => {
     queryFn: async () => {
       if (!user?.id) return null
       
-      const ranges: DateRangeLabel[] = ['all', '30d', '90d', '120d', '1y']
+      const ranges: DateRangeLabel[] = ['all', '7d', '30d', '90d', '365d']
       const results = await Promise.all(
         ranges.map(async (rangeLabel) => {
           const dateRange = getRange(rangeLabel)

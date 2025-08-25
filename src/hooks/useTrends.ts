@@ -78,16 +78,16 @@ export const useTrends = (options: UseTrendsOptions) => {
         // Specific range calculations as requested
         let daysBack: number
         switch (options.range) {
+          case '7d':
+            daysBack = 6 // today - 6 = 7 days total
+            break
           case '30d':
             daysBack = 29 // today - 29 = 30 days total
             break
           case '90d':
             daysBack = 89 // today - 89 = 90 days total
             break
-          case '120d':
-            daysBack = 119 // today - 119 = 120 days total
-            break
-          case '1y':
+          case '365d':
             daysBack = 364 // today - 364 = 365 days total
             break
           default:

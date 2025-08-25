@@ -178,6 +178,23 @@ export const Timeline: React.FC = () => {
     setAppliedFilters(processedFilters);
   }, [draftFilters, setSearchParams]);
 
+  // Get current quick filter states
+  const getCurrentDateRange = useCallback((): DateRangeLabel => {
+    if (!appliedFilters.dateRange) return 'all';
+    
+    // Check if current range matches any of the predefined ranges
+    for (const option of RANGE_OPTIONS) {
+      if (option.label === 'all') continue;
+      const range = getRange(option.label);
+      if (range && 
+          appliedFilters.dateRange.from.getTime() === range.start.getTime() &&
+          Math.abs(appliedFilters.dateRange.to.getTime() - range.end.getTime()) < 60000) { // Allow 1 minute tolerance
+        return option.label;
+      }
+    }
+    return 'all'; // Custom range, show as 'all'
+  }, [appliedFilters.dateRange]);
+
   // Reset filters to what's currently applied (from URL)
   const handleResetFilters = useCallback(() => {
     setDraftFilters(appliedFilters);
@@ -185,13 +202,23 @@ export const Timeline: React.FC = () => {
     setSearchQuery(q || '');
   }, [appliedFilters, searchParams]);
 
-  // Clear all filters
+  // Clear all filters except date range
   const handleClearFilters = useCallback(() => {
-    setDraftFilters({});
+    const currentRange = getCurrentDateRange();
+    const preservedDateRange = currentRange !== 'all' ? appliedFilters.dateRange : undefined;
+    
+    setDraftFilters(preservedDateRange ? { dateRange: preservedDateRange } : {});
     setSearchQuery('');
-    setSearchParams(new URLSearchParams(), { replace: true });
-    setAppliedFilters({});
-  }, [setSearchParams]);
+    
+    const params = new URLSearchParams();
+    if (preservedDateRange) {
+      params.set('from', format(preservedDateRange.from, 'yyyy-MM-dd'));
+      params.set('to', format(startOfDay(preservedDateRange.to), 'yyyy-MM-dd'));
+    }
+    
+    setSearchParams(params, { replace: true });
+    setAppliedFilters(preservedDateRange ? { dateRange: preservedDateRange } : {});
+  }, [setSearchParams, getCurrentDateRange, appliedFilters.dateRange]);
 
   // Quick filter handlers for header chips
   const setQuickDateRange = useCallback((rangeLabel: DateRangeLabel) => {
@@ -266,24 +293,7 @@ export const Timeline: React.FC = () => {
     }, 0);
   }, [draftFilters, setSearchParams]);
 
-  // Get current quick filter states
-  const getCurrentDateRange = useCallback((): DateRangeLabel => {
-    if (!appliedFilters.dateRange) return 'all';
-    
-    // Check if current range matches any of the predefined ranges
-    for (const option of RANGE_OPTIONS) {
-      if (option.label === 'all') continue;
-      const range = getRange(option.label);
-      if (range && 
-          appliedFilters.dateRange.from.getTime() === range.start.getTime() &&
-          Math.abs(appliedFilters.dateRange.to.getTime() - range.end.getTime()) < 60000) { // Allow 1 minute tolerance
-        return option.label;
-      }
-    }
-    return 'all'; // Custom range, show as 'all'
-  }, [appliedFilters.dateRange]);
-
-  const hasQuickFilters = appliedFilters.action || appliedFilters.significance || appliedFilters.dateRange;
+  const hasQuickFilters = appliedFilters.action || appliedFilters.significance;
 
   // Keyboard shortcuts
   useKeyboardShortcuts(
