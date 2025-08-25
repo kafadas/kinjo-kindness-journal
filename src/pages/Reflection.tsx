@@ -14,10 +14,10 @@ const Reflection: React.FC = () => {
   const { reflection, isLoading, error, regenerateWithAI, isRegenerating, dateRange } = useReflection(selectedPeriod);
 
   const periods = [
-    { value: '7d' as ReflectionPeriod, label: '7d', title: 'Weekly' },
-    { value: '30d' as ReflectionPeriod, label: '30d', title: 'Monthly' },
-    { value: '90d' as ReflectionPeriod, label: '90d', title: 'Quarterly' },
-    { value: '365d' as ReflectionPeriod, label: '1y', title: 'Yearly' }
+    { value: '7d' as ReflectionPeriod, label: '7 days', title: 'Weekly' },
+    { value: '30d' as ReflectionPeriod, label: '30 days', title: 'Monthly' },
+    { value: '90d' as ReflectionPeriod, label: '90 days', title: 'Quarterly' },
+    { value: '365d' as ReflectionPeriod, label: '1 year', title: 'Yearly' }
   ];
 
   const renderPeriodContent = () => {
@@ -25,15 +25,15 @@ const Reflection: React.FC = () => {
 
     switch (selectedPeriod) {
       case '7d':
-        return <WeeklyLayout reflection={reflection} />;
+        return <WeeklyLayout reflection={reflection} dateRange={dateRange} />;
       case '30d':
-        return <MonthlyLayout reflection={reflection} />;
+        return <MonthlyLayout reflection={reflection} dateRange={dateRange} />;
       case '90d':
-        return <QuarterlyLayout reflection={reflection} />;
+        return <QuarterlyLayout reflection={reflection} dateRange={dateRange} />;
       case '365d':
-        return <YearlyLayout reflection={reflection} />;
+        return <YearlyLayout reflection={reflection} dateRange={dateRange} />;
       default:
-        return <WeeklyLayout reflection={reflection} />;
+        return <WeeklyLayout reflection={reflection} dateRange={dateRange} />;
     }
   };
 

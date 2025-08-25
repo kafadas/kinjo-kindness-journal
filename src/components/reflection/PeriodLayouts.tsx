@@ -227,13 +227,17 @@ export const WeeklyLayout: React.FC<{ reflection: ReflectionData; dateRange?: an
 };
 
 // 30d Layout: Month in focus
-export const MonthlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflection }) => {
+export const MonthlyLayout: React.FC<{ reflection: ReflectionData; dateRange?: any }> = ({ reflection, dateRange }) => {
   const { 
     total = 0, 
+    total_moments = 0,
     top_categories = [],
     most_active_day_of_week = 'None',
     activeDays = 0 
   } = reflection.computed || {};
+  
+  // Use total_moments if available, fallback to total
+  const totalMoments = total_moments || total;
   
   // Get top category from categories array
   const topCategory = Array.isArray(top_categories) && top_categories.length > 0 
@@ -245,9 +249,15 @@ export const MonthlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflec
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-2">Month in Focus</h2>
         <p className="text-muted-foreground">Patterns and highlights from the past 30 days</p>
-        <div className="mt-3 flex justify-center">
+        <div className="mt-3 flex justify-center gap-2">
+          {dateRange && (
+            <DateRangeBadge 
+              start={dateRange?.startDate} 
+              end={dateRange?.endDate} 
+            />
+          )}
           <Badge variant={reflection.model === 'ai' ? 'default' : 'secondary'}>
-            {reflection.model === 'ai' ? 'AI Enhanced' : 'Rule-based'}
+            {reflection.model === 'ai' ? 'AI-assisted' : 'Rule-based'}
           </Badge>
         </div>
       </div>
@@ -256,7 +266,7 @@ export const MonthlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflec
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <div className="text-2xl font-bold text-primary mb-1">{total}</div>
+            <div className="text-2xl font-bold text-primary mb-1">{totalMoments}</div>
             <div className="text-sm text-muted-foreground">Total Moments</div>
           </CardContent>
         </Card>
@@ -310,8 +320,9 @@ export const MonthlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflec
 };
 
 // 90d Layout: Quarterly themes
-export const QuarterlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflection }) => {
+export const QuarterlyLayout: React.FC<{ reflection: ReflectionData; dateRange?: any }> = ({ reflection, dateRange }) => {
   const { 
+    total_moments = 0,
     top_categories = [],
     tags_top = []
   } = reflection.computed || {};
@@ -334,9 +345,15 @@ export const QuarterlyLayout: React.FC<{ reflection: ReflectionData }> = ({ refl
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-2">Quarterly Themes</h2>
         <p className="text-muted-foreground">Emerging patterns over the past 90 days</p>
-        <div className="mt-3 flex justify-center">
+        <div className="mt-3 flex justify-center gap-2">
+          {dateRange && (
+            <DateRangeBadge 
+              start={dateRange?.startDate} 
+              end={dateRange?.endDate} 
+            />
+          )}
           <Badge variant={reflection.model === 'ai' ? 'default' : 'secondary'}>
-            {reflection.model === 'ai' ? 'AI Enhanced' : 'Rule-based'}
+            {reflection.model === 'ai' ? 'AI-assisted' : 'Rule-based'}
           </Badge>
         </div>
       </div>
@@ -388,11 +405,17 @@ export const QuarterlyLayout: React.FC<{ reflection: ReflectionData }> = ({ refl
 };
 
 // 365d Layout: Year in kindness
-export const YearlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflection }) => {
+export const YearlyLayout: React.FC<{ reflection: ReflectionData; dateRange?: any }> = ({ reflection, dateRange }) => {
   const { toast } = useToast();
-  const { total = 0, milestones = {}, top_connections = [] } = reflection.computed || {};
   
-  // Extract streak data from computed milestones
+  const computed = reflection.computed || {};
+  const { 
+    total_moments = 0,
+    milestones = {},
+    top_connections = []
+  } = computed;
+  
+  // Extract milestone data
   const bestStreak = milestones?.best_streak || 0;
   const bestStreakStart = milestones?.best_streak_start;
   const bestStreakEnd = milestones?.best_streak_end;
@@ -404,15 +427,16 @@ export const YearlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflect
       return 'No streak yet — each moment counts';
     }
     
-    const startDate = format(new Date(bestStreakStart), 'MMM dd');
-    const endDate = format(new Date(bestStreakEnd), 'MMM dd, yyyy');
+    const startDate = format(new Date(bestStreakStart), 'MMM d');
+    const endDate = format(new Date(bestStreakEnd), 'MMM d');
     
     if (bestStreakStart === bestStreakEnd) {
       // Single day streak
-      return format(new Date(bestStreakStart), 'MMM dd, yyyy');
+      return `${bestStreak} day${bestStreak !== 1 ? 's' : ''} · ${format(new Date(bestStreakStart), 'MMM d, yyyy')}`;
     }
     
-    return `${startDate} – ${endDate}`;
+    // Multi-day streak with date range
+    return `${bestStreak} days · ${startDate}–${endDate}`;
   };
   
   // Extract top connections (limit to 3 for display)
@@ -490,9 +514,15 @@ export const YearlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflect
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-2">Year in Kindness</h2>
         <p className="text-muted-foreground">A celebration of your journey over the past year</p>
-        <div className="mt-3 flex justify-center">
+        <div className="mt-3 flex justify-center gap-2">
+          {dateRange && (
+            <DateRangeBadge 
+              start={dateRange?.startDate} 
+              end={dateRange?.endDate} 
+            />
+          )}
           <Badge variant={reflection.model === 'ai' ? 'default' : 'secondary'}>
-            {reflection.model === 'ai' ? 'AI Enhanced' : 'Rule-based'}
+            {reflection.model === 'ai' ? 'AI-assisted' : 'Rule-based'}
           </Badge>
         </div>
       </div>
