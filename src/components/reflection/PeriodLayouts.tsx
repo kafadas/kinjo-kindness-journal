@@ -287,12 +287,33 @@ export const QuarterlyLayout: React.FC<{ reflection: ReflectionData }> = ({ refl
 
 // 365d Layout: Year in kindness
 export const YearlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflection }) => {
-  const { total = 0 } = reflection.computed || {};
+  const { total = 0, milestones = {}, top_connections = [] } = reflection.computed || {};
   
-  // Mock data - in real implementation these would come from computed data
-  const topConnections = ['Alice', 'Bob', 'Charlie'];
-  const mostBalancedMonth = 'June';
-  const bestStreak = 15;
+  // Extract streak data from computed milestones
+  const bestStreak = milestones?.best_streak || 0;
+  const bestStreakStart = milestones?.best_streak_start;
+  const bestStreakEnd = milestones?.best_streak_end;
+  const kindestMonth = milestones?.kindest_month || 'None';
+  
+  // Format streak dates if available
+  const formatStreakDates = () => {
+    if (bestStreak === 0 || !bestStreakStart || !bestStreakEnd) {
+      return 'No streak yet — each moment counts';
+    }
+    
+    const startDate = format(new Date(bestStreakStart), 'MMM dd');
+    const endDate = format(new Date(bestStreakEnd), 'MMM dd, yyyy');
+    
+    if (bestStreakStart === bestStreakEnd) {
+      // Single day streak
+      return format(new Date(bestStreakStart), 'MMM dd, yyyy');
+    }
+    
+    return `${startDate} – ${endDate}`;
+  };
+  
+  // Extract top connections (limit to 3 for display)
+  const topConnections = (top_connections || []).slice(0, 3).map((conn: any) => conn.display_name || 'Unknown');
   
   return (
     <div className="space-y-6">
@@ -314,11 +335,15 @@ export const YearlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflect
             <div>
               <h4 className="font-medium text-sm mb-2">Top 3 people you showed up for:</h4>
               <div className="flex flex-wrap gap-2">
-                {topConnections.map((person, index) => (
-                  <Badge key={index} variant="outline">
-                    <DiscreetText variant="name" text={person} />
-                  </Badge>
-                ))}
+                {topConnections.length > 0 ? (
+                  topConnections.map((person: string, index: number) => (
+                    <Badge key={index} variant="outline">
+                      <DiscreetText variant="name" text={person} />
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-muted-foreground">Start connecting with people to see highlights</span>
+                )}
               </div>
             </div>
             
@@ -326,13 +351,22 @@ export const YearlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflect
               <div>
                 <h4 className="font-medium text-sm mb-1">Most balanced month</h4>
                 <p className="text-2xl font-bold text-primary">
-                  <DiscreetText variant="name" text={mostBalancedMonth} />
+                  <DiscreetText variant="name" text={kindestMonth} />
                 </p>
               </div>
               
               <div>
                 <h4 className="font-medium text-sm mb-1">Best streak</h4>
-                <p className="text-2xl font-bold text-primary">{bestStreak} days</p>
+                {bestStreak > 0 ? (
+                  <>
+                    <p className="text-2xl font-bold text-primary">{bestStreak} days</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatStreakDates()}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No streak yet — each moment counts</p>
+                )}
               </div>
             </div>
           </div>
