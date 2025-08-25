@@ -18,7 +18,10 @@ import {
   Download
 } from 'lucide-react';
 import { DiscreetText } from '@/components/ui/DiscreetText';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { DateRangeBadge } from '@/components/ui/DateRangeBadge';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReflectionData {
   summary: string | null;
@@ -92,6 +95,11 @@ export const WeeklyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflect
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-2">Weekly Check-in</h2>
         <p className="text-muted-foreground">A gentle look at your week of kindness</p>
+        <div className="mt-3 flex justify-center">
+          <Badge variant={reflection.model === 'ai' ? 'default' : 'secondary'}>
+            {reflection.model === 'ai' ? 'AI Enhanced' : 'Rule-based'}
+          </Badge>
+        </div>
       </div>
 
       {/* Mini Kindness Balance */}
@@ -160,14 +168,28 @@ export const WeeklyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflect
 
 // 30d Layout: Month in focus
 export const MonthlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflection }) => {
-  const { total = 0, top_category = '', activeDays = 0 } = reflection.computed || {};
-  const mostActiveDay = 'Wednesday'; // Could be computed from data
+  const { 
+    total = 0, 
+    top_categories = [],
+    most_active_day_of_week = 'None',
+    activeDays = 0 
+  } = reflection.computed || {};
+  
+  // Get top category from categories array
+  const topCategory = Array.isArray(top_categories) && top_categories.length > 0 
+    ? top_categories[0].name 
+    : 'Various';
   
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-2">Month in Focus</h2>
         <p className="text-muted-foreground">Patterns and highlights from the past 30 days</p>
+        <div className="mt-3 flex justify-center">
+          <Badge variant={reflection.model === 'ai' ? 'default' : 'secondary'}>
+            {reflection.model === 'ai' ? 'AI Enhanced' : 'Rule-based'}
+          </Badge>
+        </div>
       </div>
 
       {/* 3 Stat Tiles */}
@@ -182,7 +204,7 @@ export const MonthlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflec
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-primary mb-1">
-              <DiscreetText variant="name" text={mostActiveDay} />
+              <DiscreetText variant="name" text={most_active_day_of_week} />
             </div>
             <div className="text-sm text-muted-foreground">Most Active Day</div>
           </CardContent>
@@ -191,7 +213,7 @@ export const MonthlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflec
         <Card>
           <CardContent className="p-4 text-center">
             <div className="text-2xl font-bold text-primary mb-1">
-              <DiscreetText variant="name" text={top_category || 'Various'} />
+              <DiscreetText variant="name" text={topCategory} />
             </div>
             <div className="text-sm text-muted-foreground">Top Category</div>
           </CardContent>
@@ -229,14 +251,34 @@ export const MonthlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflec
 
 // 90d Layout: Quarterly themes
 export const QuarterlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflection }) => {
-  // Mock themes - in real implementation these would come from computed data
-  const themes = ['Connection', 'Growth', 'Presence'];
+  const { 
+    top_categories = [],
+    tags_top = []
+  } = reflection.computed || {};
+  
+  // Create themes from top tags and category names
+  const tagThemes = Array.isArray(tags_top) ? tags_top.slice(0, 3) : [];
+  const categoryThemes = Array.isArray(top_categories) 
+    ? top_categories.slice(0, 2).map((cat: any) => cat.name || cat)
+    : [];
+  
+  // Combine and deduplicate
+  const allThemes = [...tagThemes, ...categoryThemes];
+  const uniqueThemes = [...new Set(allThemes)].slice(0, 5);
+  
+  // Fallback themes if no data
+  const themes = uniqueThemes.length > 0 ? uniqueThemes : ['Connection', 'Growth', 'Presence'];
   
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-2">Quarterly Themes</h2>
         <p className="text-muted-foreground">Emerging patterns over the past 90 days</p>
+        <div className="mt-3 flex justify-center">
+          <Badge variant={reflection.model === 'ai' ? 'default' : 'secondary'}>
+            {reflection.model === 'ai' ? 'AI Enhanced' : 'Rule-based'}
+          </Badge>
+        </div>
       </div>
 
       {/* Theme Chips */}
@@ -251,7 +293,7 @@ export const QuarterlyLayout: React.FC<{ reflection: ReflectionData }> = ({ refl
           <div className="flex flex-wrap gap-2">
             {themes.map((theme, index) => (
               <Badge key={index} variant="secondary" className="text-base px-3 py-1">
-                <DiscreetText variant="name" text={theme} />
+                <DiscreetText variant="name" text={String(theme)} />
               </Badge>
             ))}
           </div>
@@ -287,6 +329,7 @@ export const QuarterlyLayout: React.FC<{ reflection: ReflectionData }> = ({ refl
 
 // 365d Layout: Year in kindness
 export const YearlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflection }) => {
+  const { toast } = useToast();
   const { total = 0, milestones = {}, top_connections = [] } = reflection.computed || {};
   
   // Extract streak data from computed milestones
@@ -314,12 +357,84 @@ export const YearlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflect
   
   // Extract top connections (limit to 3 for display)
   const topConnections = (top_connections || []).slice(0, 3).map((conn: any) => conn.display_name || 'Unknown');
+
+  // Handle PDF download
+  const handleDownloadPDF = async () => {
+    try {
+      toast({
+        title: "Generating your yearly summary...",
+        description: "This may take a moment",
+      });
+
+      const currentYear = new Date().getFullYear();
+      const startDate = `${currentYear}-01-01`;
+      const endDate = `${currentYear}-12-31`;
+      
+      const { data, error } = await supabase.functions.invoke('export-pdf', {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: new URLSearchParams({
+          start: startDate,
+          end: endDate,
+          summary: '1'
+        }).toString(),
+      });
+
+      if (error) {
+        console.error('Export error:', error);
+        toast({
+          title: "Export failed",
+          description: "There was an issue generating your summary. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create a blob from the HTML response and open in new window for printing
+      const htmlContent = await fetch(data).then(r => r.text());
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      
+      // Open in new window
+      const printWindow = window.open(url, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+          URL.revokeObjectURL(url);
+        };
+        
+        toast({
+          title: "Summary ready!",
+          description: "Your yearly summary is ready to download or print.",
+        });
+      } else {
+        toast({
+          title: "Popup blocked",
+          description: "Please allow popups and try again, or download directly.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download failed",
+        description: "Something went wrong. Please try again in a moment.",
+        variant: "destructive",
+      });
+    }
+  };
   
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-foreground mb-2">Year in Kindness</h2>
         <p className="text-muted-foreground">A celebration of your journey over the past year</p>
+        <div className="mt-3 flex justify-center">
+          <Badge variant={reflection.model === 'ai' ? 'default' : 'secondary'}>
+            {reflection.model === 'ai' ? 'AI Enhanced' : 'Rule-based'}
+          </Badge>
+        </div>
       </div>
 
       {/* Highlights */}
@@ -393,7 +508,11 @@ export const YearlyLayout: React.FC<{ reflection: ReflectionData }> = ({ reflect
       {/* Download PDF Button */}
       <Card>
         <CardContent className="p-4 text-center">
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={handleDownloadPDF}
+          >
             <Download className="h-4 w-4" />
             Download Yearly Summary
           </Button>
