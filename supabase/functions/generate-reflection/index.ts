@@ -172,7 +172,35 @@ serve(async (req) => {
           // Use period_bounds with user's timezone for consistency
           const { data: bounds } = await supabaseClient.rpc('period_bounds', { p_period: period, p_tz: timezone });
           
-          // Create reflection with AI content
+          // Create reflection with AI content - use UI-expected field names
+          const computed = {
+            given: context.givenCount,
+            received: context.receivedCount,
+            total: context.totalMoments,
+            given_count: context.givenCount,  // UI expects this field name
+            received_count: context.receivedCount,  // UI expects this field name
+            total_moments: context.totalMoments,  // UI expects this field name
+            top_category: topCategory || '',
+            period,
+            activeDays: context.activeDays
+          };
+
+          // Add daily_by_weekday for 7d period
+          if (period === '7d') {
+            // Generate daily weekday breakdown for AI path
+            const dailyByWeekday = new Array(7).fill(0).map(() => ({ total: 0, given: 0, received: 0 }));
+            
+            momentsWithCategories?.forEach(m => {
+              const date = new Date(m.happened_at);
+              const dow = (date.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0 format
+              dailyByWeekday[dow].total++;
+              if (m.action === 'given') dailyByWeekday[dow].given++;
+              if (m.action === 'received') dailyByWeekday[dow].received++;
+            });
+            
+            computed.daily_by_weekday = dailyByWeekday;
+          }
+
           const { data: aiReflection, error: insertError } = await supabaseClient
             .from('reflections')
             .upsert({
@@ -183,14 +211,7 @@ serve(async (req) => {
               summary: aiResult.summary,
               suggestions: aiResult.suggestions,
               model: 'ai',
-              computed: {
-                given: context.givenCount,
-                received: context.receivedCount,
-                total: context.totalMoments,
-                top_category: topCategory || '',
-                period,
-                activeDays: context.activeDays
-              },
+              computed,
               regenerated_at: new Date().toISOString()
             }, {
               onConflict: 'user_id,period,range_start,range_end'
