@@ -1,5 +1,15 @@
-import { startOfDay, endOfDay, subDays, subYears } from 'date-fns'
+export type Period = '7d' | '30d' | '90d' | '365d';
 
+export function getRange(period: Period, tz: string) {
+  // end = today in user's tz, inclusive end-of-day
+  const now = new Date(); // js local; server must pass tz separately to SQL
+  const end = new Date(now); // label only; SQL will do the real tz-boundary
+  const days = period==='7d'?7:period==='30d'?30:period==='90d'?90:365;
+  const start = new Date(end); start.setDate(start.getDate()-(days-1));
+  return { start, end, period };
+}
+
+// Legacy support for existing code
 export type DateRangeLabel = 'all' | '7d' | '30d' | '90d' | '365d'
 
 export interface DateRange {
@@ -7,36 +17,14 @@ export interface DateRange {
   end: Date
 }
 
-export const getRange = (label: DateRangeLabel, timezone: string = 'UTC'): DateRange | null => {
-  // Return null for "all" to indicate no date filter
+// Legacy function that wraps the new one
+export const getRangeLegacy = (label: DateRangeLabel, timezone: string = 'UTC'): DateRange | null => {
   if (label === 'all') {
     return null
   }
   
-  // Get current date in user's timezone
-  const now = new Date()
-  const end = endOfDay(now)
-  
-  let start: Date
-  
-  switch (label) {
-    case '7d':
-      start = startOfDay(subDays(now, 7))
-      break
-    case '30d':
-      start = startOfDay(subDays(now, 30))
-      break
-    case '90d':
-      start = startOfDay(subDays(now, 90))
-      break
-    case '365d':
-      start = startOfDay(subDays(now, 365))
-      break
-    default:
-      throw new Error(`Invalid date range label: ${label}`)
-  }
-  
-  return { start, end }
+  const result = getRange(label as Period, timezone)
+  return { start: result.start, end: result.end }
 }
 
 export const RANGE_OPTIONS = [
