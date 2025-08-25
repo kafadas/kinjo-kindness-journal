@@ -20,6 +20,12 @@ export const DevRLSCheck = () => {
   const [results, setResults] = useState<TestResult[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [isInsertingSample, setIsInsertingSample] = useState(false)
+  const [reflectionResult, setReflectionResult] = useState<any>(null)
+  const [isGeneratingReflection, setIsGeneratingReflection] = useState(false)
+
+  // Check if we're in dev mode
+  const urlParams = new URLSearchParams(window.location.search)
+  const isDevMode = urlParams.get('dev') === '1'
 
   const updateResult = (index: number, status: 'success' | 'error', message: string, data?: any) => {
     setResults(prev => prev.map((result, i) => 
@@ -123,6 +129,35 @@ export const DevRLSCheck = () => {
 
   const clearResults = () => {
     setResults([])
+  }
+
+  const generateReflection = async () => {
+    if (!user) {
+      toast.error('Must be logged in to generate reflection')
+      return
+    }
+
+    setIsGeneratingReflection(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-reflection', {
+        body: { range: '7d' },
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (error) {
+        toast.error('Failed to generate reflection: ' + error.message)
+        setReflectionResult({ error: error.message })
+      } else {
+        toast.success('Reflection generated successfully')
+        setReflectionResult(data)
+      }
+    } catch (error) {
+      const errorMsg = (error as Error).message
+      toast.error('Error generating reflection: ' + errorMsg)
+      setReflectionResult({ error: errorMsg })
+    } finally {
+      setIsGeneratingReflection(false)
+    }
   }
 
   const insertSampleData = async () => {
@@ -318,6 +353,15 @@ export const DevRLSCheck = () => {
         >
           {isInsertingSample ? 'Inserting...' : 'Insert Sample Data'}
         </Button>
+        {isDevMode && (
+          <Button 
+            variant="outline" 
+            onClick={generateReflection} 
+            disabled={isGeneratingReflection}
+          >
+            {isGeneratingReflection ? 'Generating...' : 'Generate Reflection (7d)'}
+          </Button>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -351,6 +395,36 @@ export const DevRLSCheck = () => {
             </CardContent>
           </Card>
         ))}
+        
+        {/* Dev-only Reflection Result */}
+        {isDevMode && reflectionResult && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Reflection Test Result
+                <Badge variant="outline">DEV</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="mb-2">
+                Generated reflection with source: <strong>{reflectionResult.source || 'unknown'}</strong>
+              </p>
+              {reflectionResult.range_start && reflectionResult.range_end && (
+                <p className="mb-2 text-sm text-muted-foreground">
+                  Range: {reflectionResult.range_start} to {reflectionResult.range_end}
+                </p>
+              )}
+              <details className="mt-2">
+                <summary className="cursor-pointer text-sm text-muted-foreground">
+                  Show full reflection JSON
+                </summary>
+                <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-auto">
+                  {JSON.stringify(reflectionResult, null, 2)}
+                </pre>
+              </details>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {results.length === 0 && (

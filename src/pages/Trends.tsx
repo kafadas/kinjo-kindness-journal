@@ -526,7 +526,18 @@ export const Trends: React.FC = () => {
             <div className="text-base sm:text-lg font-semibold mb-1">
               {(() => {
                 if (selectedRange === 'all') {
-                  return totalMoments > 0 ? 'N/A' : '0'
+                  // For "All" filter, calculate actual daily average based on data span
+                  if (totalMoments === 0) return '0'
+                  
+                  // Get the span of days from the data
+                  const dates = data.seriesDaily.map(d => d.date).filter(Boolean)
+                  if (dates.length === 0) return '0'
+                  
+                  const firstDate = new Date(dates[0])
+                  const lastDate = new Date(dates[dates.length - 1])
+                  const daysDiff = Math.max(1, Math.ceil((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+                  
+                  return (totalMoments / daysDiff).toFixed(1)
                 }
                 const days = selectedRange === '1y' ? 365 : parseInt(selectedRange.replace('d', ''))
                 return totalMoments > 0 ? (totalMoments / days).toFixed(1) : '0'
