@@ -18,7 +18,7 @@ import { PersonDetails } from "./pages/PersonDetails";
 import { Categories } from "./pages/Categories";
 import { CategoryDetails } from "./pages/CategoryDetails";
 import { Trends } from "./pages/Trends";
-import { Reflection } from "./pages/Reflection";
+import Reflection from "./pages/Reflection";
 import { Streaks } from "./pages/Streaks";
 import { YearlyWrap } from "./pages/YearlyWrap";
 import { Groups } from "./pages/Groups";
@@ -45,6 +45,10 @@ const DevTrendsCheck = lazy(() =>
 
 const DevTrendsAudit = lazy(() =>
   import("./pages/DevTrendsAudit").then(module => ({ default: module.default }))
+);
+
+const DevReflectionCheck = lazy(() =>
+  import("./pages/DevReflectionCheck").then(module => ({ default: module.default }))
 );
 
 const queryClient = new QueryClient();
@@ -100,6 +104,16 @@ const App = () => (
                     <AppLayout>
                       <Suspense fallback={<div className="p-6">Loading dev tools...</div>}>
                         <DevTrendsAudit />
+                      </Suspense>
+                    </AppLayout>
+                  } 
+                />
+                <Route 
+                  path="/dev/reflection-check" 
+                  element={
+                    <AppLayout>
+                      <Suspense fallback={<div className="p-6">Loading dev tools...</div>}>
+                        <DevReflectionCheck />
                       </Suspense>
                     </AppLayout>
                   } 

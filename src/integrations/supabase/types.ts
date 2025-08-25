@@ -563,6 +563,22 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_or_generate_reflection: {
+        Args: { p_period: string; p_tz?: string }
+        Returns: {
+          computed: Json | null
+          created_at: string | null
+          id: string
+          model: string
+          period: string
+          range_end: string | null
+          range_start: string | null
+          regenerated_at: string | null
+          suggestions: string | null
+          summary: string | null
+          user_id: string
+        }
+      }
       get_reflection_period: {
         Args: { p_period: string; p_tz?: string; p_user: string }
         Returns: {
@@ -628,6 +644,13 @@ export type Database = {
           display_name: string
           last_recorded: string
           person_id: string
+        }[]
+      }
+      period_bounds: {
+        Args: { p_period: string; p_tz?: string }
+        Returns: {
+          d_end: string
+          d_start: string
         }[]
       }
       refresh_person_last_recorded: {
