@@ -451,6 +451,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      best_streak_window: {
+        Args: { p_end: string; p_start: string; p_user: string }
+        Returns: {
+          d_end: string
+          d_start: string
+          streak: number
+        }[]
+      }
       category_share_counts: {
         Args: {
           p_action: string
