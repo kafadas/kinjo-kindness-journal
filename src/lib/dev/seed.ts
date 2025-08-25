@@ -213,6 +213,145 @@ export const seedSampleData = async () => {
   }
 };
 
+export const seedStreakDemo = async () => {
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const userId = user.id;
+
+  try {
+    console.log('Creating streak demo data...');
+
+    // Ensure we have categories and people
+    const categoryMap = new Map<string, string>();
+    
+    for (const cat of SAMPLE_CATEGORIES.slice(0, 3)) { // Just first 3 categories
+      const { data: existing } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('slug', cat.slug)
+        .maybeSingle();
+
+      if (existing) {
+        categoryMap.set(cat.slug, existing.id);
+      } else {
+        const { data: created } = await supabase
+          .from('categories')
+          .insert({
+            user_id: userId,
+            name: cat.name,
+            slug: cat.slug,
+            is_default: true,
+            sort_order: SAMPLE_CATEGORIES.indexOf(cat) + 1
+          })
+          .select('id')
+          .single();
+
+        if (created) {
+          categoryMap.set(cat.slug, created.id);
+        }
+      }
+    }
+
+    // Create 3 people for variety
+    const streakPeople = SAMPLE_PEOPLE.slice(0, 3);
+    const peopleIds: string[] = [];
+    
+    for (const person of streakPeople) {
+      const defaultCategoryId = categoryMap.get(person.category_slug);
+      
+      const { data: created } = await supabase
+        .from('people')
+        .insert({
+          user_id: userId,
+          display_name: person.display_name,
+          aliases: person.aliases,
+          default_category_id: defaultCategoryId
+        })
+        .select('id')
+        .single();
+
+      if (created) {
+        peopleIds.push(created.id);
+      }
+    }
+
+    const categoryIds = Array.from(categoryMap.values());
+    const moments: Array<any> = [];
+    const now = new Date();
+    
+    // Pattern: 12 consecutive days with 1-3 moments each, then 1-day gap, then 3 sparse days
+    
+    // 12 consecutive days (starting 16 days ago to include the gap and sparse days)
+    for (let dayOffset = 16; dayOffset >= 5; dayOffset--) {
+      const momentsThisDay = Math.floor(Math.random() * 3) + 1; // 1-3 moments
+      
+      for (let momentIndex = 0; momentIndex < momentsThisDay; momentIndex++) {
+        const momentDate = new Date(now);
+        momentDate.setDate(momentDate.getDate() - dayOffset);
+        momentDate.setHours(8 + Math.floor(Math.random() * 12)); // 8 AM to 8 PM
+        momentDate.setMinutes(Math.floor(Math.random() * 60));
+        
+        moments.push({
+          user_id: userId,
+          description: SAMPLE_DESCRIPTIONS[Math.floor(Math.random() * SAMPLE_DESCRIPTIONS.length)],
+          action: 'given', // All given for streak demo
+          happened_at: momentDate.toISOString(),
+          person_id: peopleIds[Math.floor(Math.random() * peopleIds.length)],
+          category_id: categoryIds[Math.floor(Math.random() * categoryIds.length)],
+          significance: Math.random() < 0.15, // 15% significant
+          tags: getRandomItems(SAMPLE_TAGS, Math.floor(Math.random() * 2) + 1),
+          source: 'text'
+        });
+      }
+    }
+    
+    // Day 4 is the gap (no moments)
+    
+    // 3 sparse days (days 3, 2, 1 ago) - only 1 moment each, random chance
+    for (let dayOffset = 3; dayOffset >= 1; dayOffset--) {
+      if (Math.random() < 0.7) { // 70% chance for a moment on sparse days
+        const momentDate = new Date(now);
+        momentDate.setDate(momentDate.getDate() - dayOffset);
+        momentDate.setHours(10 + Math.floor(Math.random() * 8)); // 10 AM to 6 PM
+        momentDate.setMinutes(Math.floor(Math.random() * 60));
+        
+        moments.push({
+          user_id: userId,
+          description: SAMPLE_DESCRIPTIONS[Math.floor(Math.random() * SAMPLE_DESCRIPTIONS.length)],
+          action: Math.random() < 0.7 ? 'given' : 'received', // Mostly given
+          happened_at: momentDate.toISOString(),
+          person_id: peopleIds[Math.floor(Math.random() * peopleIds.length)],
+          category_id: categoryIds[Math.floor(Math.random() * categoryIds.length)],
+          significance: Math.random() < 0.1,
+          tags: getRandomItems(SAMPLE_TAGS, 1),
+          source: 'text'
+        });
+      }
+    }
+
+    // Insert moments in batches
+    console.log(`Creating ${moments.length} moments for streak demo...`);
+    const batchSize = 10;
+    for (let i = 0; i < moments.length; i += batchSize) {
+      const batch = moments.slice(i, i + batchSize);
+      await supabase.from('moments').insert(batch);
+      
+      if (i + batchSize < moments.length) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    }
+
+    console.log('Streak demo data created successfully');
+
+  } catch (error) {
+    console.error('Error creating streak demo:', error);
+    throw error;
+  }
+};
+
 export const clearSampleData = async () => {
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();

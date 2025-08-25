@@ -4,11 +4,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { seedSampleData, clearSampleData } from '@/lib/dev/seed';
+import { seedSampleData, clearSampleData, seedStreakDemo } from '@/lib/dev/seed';
 
 export const DevSeedData = () => {
   const [isSeeding, setIsSeeding] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isCreatingStreak, setIsCreatingStreak] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -39,6 +40,34 @@ export const DevSeedData = () => {
       });
     } finally {
       setIsSeeding(false);
+    }
+  };
+
+  const handleStreakDemo = async () => {
+    setIsCreatingStreak(true);
+    try {
+      await seedStreakDemo();
+      
+      // Refresh React Query caches
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+      queryClient.invalidateQueries({ queryKey: ['people'] });
+      queryClient.invalidateQueries({ queryKey: ['moments'] });
+      queryClient.invalidateQueries({ queryKey: ['trends'] });
+      queryClient.invalidateQueries({ queryKey: ['home-insights'] });
+      
+      toast({
+        title: "Streak demo data created",
+        description: "12-day streak pattern with variety across categories and people",
+      });
+      navigate('/reflection');
+    } catch (error) {
+      toast({
+        title: "Error creating streak demo",
+        description: error instanceof Error ? error.message : "Failed to create streak demo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingStreak(false);
     }
   };
 
@@ -90,10 +119,30 @@ export const DevSeedData = () => {
           <CardContent>
             <Button 
               onClick={handleSeedData} 
-              disabled={isSeeding || isClearing}
+              disabled={isSeeding || isClearing || isCreatingStreak}
               className="w-full"
             >
               {isSeeding ? "Inserting..." : "Insert Rich Sample Data"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-secondary">Insert Streak Demo</CardTitle>
+            <CardDescription>
+              Creates a 12-day streak pattern with 1-3 moments per day, then a gap, then sparse days.
+              Perfect for testing weekday dots, streak calculations, and reflection views.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              variant="secondary"
+              onClick={handleStreakDemo} 
+              disabled={isSeeding || isClearing || isCreatingStreak}
+              className="w-full"
+            >
+              {isCreatingStreak ? "Creating..." : "Insert Streak Demo"}
             </Button>
           </CardContent>
         </Card>
@@ -110,7 +159,7 @@ export const DevSeedData = () => {
             <Button 
               variant="destructive" 
               onClick={handleClearData} 
-              disabled={isSeeding || isClearing}
+              disabled={isSeeding || isClearing || isCreatingStreak}
               className="w-full"
             >
               {isClearing ? "Clearing..." : "Clear Sample Data"}
