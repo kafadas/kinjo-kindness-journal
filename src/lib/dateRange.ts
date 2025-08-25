@@ -1,6 +1,6 @@
 import { startOfDay, endOfDay, subDays, subYears } from 'date-fns'
 
-export type DateRangeLabel = 'all' | '7d' | '30d' | '90d' | '120d' | '1y'
+export type DateRangeLabel = 'all' | '30d' | '90d' | '120d' | '1y'
 
 export interface DateRange {
   start: Date
@@ -20,9 +20,6 @@ export const getRange = (label: DateRangeLabel, timezone: string = 'UTC'): DateR
   let start: Date
   
   switch (label) {
-    case '7d':
-      start = startOfDay(subDays(now, 7))
-      break
     case '30d':
       start = startOfDay(subDays(now, 30))
       break
@@ -44,7 +41,6 @@ export const getRange = (label: DateRangeLabel, timezone: string = 'UTC'): DateR
 
 export const RANGE_OPTIONS = [
   { label: 'all' as DateRangeLabel, display: 'All' },
-  { label: '7d' as DateRangeLabel, display: '7 days' },
   { label: '30d' as DateRangeLabel, display: '30 days' },
   { label: '90d' as DateRangeLabel, display: '90 days' },
   { label: '120d' as DateRangeLabel, display: '120 days' },
