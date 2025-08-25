@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { RefreshCw, Database, Bot, AlertCircle } from 'lucide-react';
-import { useReflection, type ReflectionPeriod } from '@/hooks/useReflection';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { type ReflectionPeriod } from '@/hooks/useReflection';
 import { format } from 'date-fns';
 
 const DevReflectionCheck: React.FC = () => {
+  const { user } = useAuth();
   const [reflections, setReflections] = useState<Record<ReflectionPeriod, any>>({
     '7d': null,
     '30d': null,
@@ -21,8 +24,6 @@ const DevReflectionCheck: React.FC = () => {
     '365d': false
   });
 
-  const { getReflection, regenerateWithAI } = useReflection();
-
   const periods: { value: ReflectionPeriod; label: string }[] = [
     { value: '7d', label: '7 Days' },
     { value: '30d', label: '30 Days' },
@@ -31,20 +32,39 @@ const DevReflectionCheck: React.FC = () => {
   ];
 
   const loadReflection = async (period: ReflectionPeriod) => {
+    if (!user?.id) return;
+    
     setLoading(prev => ({ ...prev, [period]: true }));
     try {
-      const data = await getReflection(period);
-      setReflections(prev => ({ ...prev, [period]: data }));
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const { data, error } = await supabase.rpc('get_or_generate_reflection', {
+        p_period: period,
+        p_tz: timezone
+      });
+
+      if (error) {
+        console.error('Error fetching reflection:', error);
+      } else {
+        setReflections(prev => ({ ...prev, [period]: data }));
+      }
     } finally {
       setLoading(prev => ({ ...prev, [period]: false }));
     }
   };
 
   const regenerateReflection = async (period: ReflectionPeriod) => {
+    if (!user?.id) return;
+    
     setLoading(prev => ({ ...prev, [period]: true }));
     try {
-      const data = await regenerateWithAI(period);
-      if (data) {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const { data, error } = await supabase.functions.invoke('generate-reflection', {
+        body: { period, tz: timezone }
+      });
+
+      if (error) {
+        console.error('Error regenerating reflection:', error);
+      } else {
         setReflections(prev => ({ ...prev, [period]: data }));
       }
     } finally {
@@ -57,11 +77,6 @@ const DevReflectionCheck: React.FC = () => {
       await loadReflection(period.value);
     }
   };
-
-  useEffect(() => {
-    // Auto-load all reflections on mount
-    loadAllReflections();
-  }, []);
 
   const renderReflectionCard = (period: ReflectionPeriod, label: string) => {
     const reflection = reflections[period];

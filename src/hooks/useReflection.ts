@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { startOfDay, subDays, format } from 'date-fns';
 
 export type ReflectionPeriod = '7d' | '30d' | '90d' | '365d';
 
@@ -18,25 +19,54 @@ interface ReflectionData {
   regenerated_at: string;
 }
 
-export const useReflection = () => {
-  const [loading, setLoading] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastRegenerateTime, setLastRegenerateTime] = useState<number>(0);
+// Helper to compute date range for period
+export const computePeriodDateRange = (period: ReflectionPeriod, timezone: string = 'UTC') => {
+  const now = new Date();
+  let start: Date;
+  let end: Date = startOfDay(now);
 
+  switch (period) {
+    case '7d':
+      start = startOfDay(subDays(now, 6));
+      break;
+    case '30d':
+      start = startOfDay(subDays(now, 29));
+      break;
+    case '90d':
+      start = startOfDay(subDays(now, 89));
+      break;
+    case '365d':
+      start = startOfDay(subDays(now, 364));
+      break;
+    default:
+      start = startOfDay(subDays(now, 6));
+  }
+
+  return {
+    start: format(start, 'yyyy-MM-dd'),
+    end: format(end, 'yyyy-MM-dd'),
+    startDate: start,
+    endDate: end
+  };
+};
+
+export const useReflection = (period: ReflectionPeriod) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  // Get user timezone
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const dateRange = computePeriodDateRange(period, timezone);
+  
+  // Cache key includes user, period, and date range
+  const cacheKey = ['reflection', user?.id, period, dateRange.start, dateRange.end];
 
-  const getReflection = useCallback(async (period: ReflectionPeriod): Promise<ReflectionData | null> => {
-    if (!user?.id) return null;
-    
-    setLoading(true);
-    setError(null);
+  // Auto-fetch reflection data
+  const { data: reflection, isLoading, error, refetch } = useQuery({
+    queryKey: cacheKey,
+    queryFn: async (): Promise<ReflectionData | null> => {
+      if (!user?.id) return null;
 
-    try {
-      // Get user timezone
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-      // Call the deterministic RPC function
       const { data, error: rpcError } = await supabase.rpc('get_or_generate_reflection', {
         p_period: period,
         p_tz: timezone
@@ -44,60 +74,51 @@ export const useReflection = () => {
 
       if (rpcError) {
         console.error('Error fetching reflection:', rpcError);
-        setError(rpcError.message);
-        return null;
+        throw new Error(rpcError.message);
       }
 
       return data;
-    } catch (err) {
-      console.error('Error:', err);
-      setError('Failed to load reflection');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1
+  });
 
-  const regenerateWithAI = useCallback(async (period: ReflectionPeriod): Promise<ReflectionData | null> => {
-    const now = Date.now();
-    if (now - lastRegenerateTime < 60000) { // 60 second debounce
-      return null;
-    }
+  // Regenerate with AI mutation
+  const regenerateMutation = useMutation({
+    mutationFn: async (): Promise<ReflectionData | null> => {
+      if (!user?.id) return null;
 
-    if (!user?.id) return null;
-    
-    setRegenerating(true);
-    setLastRegenerateTime(now);
-
-    try {
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-      // Call the edge function to try AI path
       const { data, error: functionError } = await supabase.functions.invoke('generate-reflection', {
         body: { period, tz: timezone }
       });
 
       if (functionError) {
         console.error('Error regenerating reflection:', functionError);
-        setError(functionError.message);
-        return null;
+        throw new Error(functionError.message);
       }
 
       return data;
-    } catch (err) {
-      console.error('Error:', err);
-      setError('Failed to regenerate reflection');
-      return null;
-    } finally {
-      setRegenerating(false);
+    },
+    onSuccess: (data) => {
+      if (data) {
+        // Update cache with new data
+        queryClient.setQueryData(cacheKey, data);
+      }
     }
-  }, [user?.id, lastRegenerateTime]);
+  });
+
+  const regenerateWithAI = () => {
+    regenerateMutation.mutate();
+  };
 
   return {
-    loading,
-    regenerating,
+    reflection,
+    isLoading,
     error,
-    getReflection,
-    regenerateWithAI
+    refetch,
+    regenerateWithAI,
+    isRegenerating: regenerateMutation.isPending,
+    dateRange
   };
 };
