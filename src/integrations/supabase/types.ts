@@ -333,28 +333,40 @@ export type Database = {
       }
       reflections: {
         Row: {
+          computed: Json | null
           created_at: string | null
           id: string
+          model: string
+          period: string
           range_end: string | null
           range_start: string | null
+          regenerated_at: string | null
           suggestions: string | null
           summary: string | null
           user_id: string
         }
         Insert: {
+          computed?: Json | null
           created_at?: string | null
           id?: string
+          model?: string
+          period?: string
           range_end?: string | null
           range_start?: string | null
+          regenerated_at?: string | null
           suggestions?: string | null
           summary?: string | null
           user_id: string
         }
         Update: {
+          computed?: Json | null
           created_at?: string | null
           id?: string
+          model?: string
+          period?: string
           range_end?: string | null
           range_start?: string | null
+          regenerated_at?: string | null
           suggestions?: string | null
           summary?: string | null
           user_id?: string
