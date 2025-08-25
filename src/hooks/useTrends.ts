@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from './useAuth'
 import { format } from 'date-fns'
-import { getRange, type DateRangeLabel } from '@/lib/dateRange'
+import { getRange, type Period } from '@/lib/dateRange'
 
 interface DailyData {
   date: string
@@ -31,7 +31,7 @@ interface TrendsData {
 }
 
 interface UseTrendsOptions {
-  range: DateRangeLabel
+  range: Period | 'all'
   action: 'given' | 'received' | 'both'
   significance: boolean
 }
@@ -75,34 +75,14 @@ export const useTrends = (options: UseTrendsOptions) => {
           }
         }
       } else {
-        // Specific range calculations as requested
-        let daysBack: number
-        switch (options.range) {
-          case '7d':
-            daysBack = 6 // today - 6 = 7 days total
-            break
-          case '30d':
-            daysBack = 29 // today - 29 = 30 days total
-            break
-          case '90d':
-            daysBack = 89 // today - 89 = 90 days total
-            break
-          case '365d':
-            daysBack = 364 // today - 364 = 365 days total
-            break
-          default:
-            daysBack = 29
-        }
-        
-        const startDate = new Date(today)
-        startDate.setDate(today.getDate() - daysBack)
-        
-        startDateStr = format(startDate, 'yyyy-MM-dd')
-        endDateStr = todayStr
+        // Use unified date range logic
+        const range = getRange(options.range as Period, timezone);
+        startDateStr = format(range.start, 'yyyy-MM-dd');
+        endDateStr = format(range.end, 'yyyy-MM-dd');
         
         chartDateRange = {
-          start: startDate,
-          end: today
+          start: range.start,
+          end: range.end
         }
       }
 

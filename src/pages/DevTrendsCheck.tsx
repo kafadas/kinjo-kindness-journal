@@ -9,7 +9,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { RefreshCw, ExternalLink, Database, User, Calendar, BarChart3, AlertCircle, CheckCircle, Filter, Activity } from 'lucide-react'
-import { RANGE_OPTIONS, type DateRangeLabel, getRange } from '@/lib/dateRange'
+import { RANGE_OPTIONS, type DateRangeLabel, getRange, getRangeLegacy } from '@/lib/dateRange'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { formatPct1, formatNum, formatDelta } from '@/lib/formatters'
@@ -62,7 +62,7 @@ export const DevTrendsCheck: React.FC = () => {
       const ranges: DateRangeLabel[] = ['all', '7d', '30d', '90d', '365d']
       const results = await Promise.all(
         ranges.map(async (rangeLabel) => {
-          const dateRange = getRange(rangeLabel)
+          const dateRange = getRangeLegacy(rangeLabel)
           
           let query = supabase
             .from('moments')
@@ -103,7 +103,7 @@ export const DevTrendsCheck: React.FC = () => {
     queryFn: async () => {
       if (!user?.id) return null
       
-      const dateRange = getRange(selectedRange)
+      const dateRange = getRangeLegacy(selectedRange)
       const startStr = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : null
       const endStr = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : null
 
@@ -168,7 +168,7 @@ export const DevTrendsCheck: React.FC = () => {
     queryFn: async () => {
       if (!user?.id) return null
       
-      const dateRange = getRange(selectedRange)
+      const dateRange = getRangeLegacy(selectedRange)
       const startStr = dateRange ? format(dateRange.start, 'yyyy-MM-dd') : null
       const endStr = dateRange ? format(dateRange.end, 'yyyy-MM-dd') : null
 
@@ -426,7 +426,7 @@ export const DevTrendsCheck: React.FC = () => {
               <code className="text-xs bg-muted p-3 rounded block">
                 WHERE user_id = '{user.id}'
                 {(() => {
-                  const dateRange = getRange(selectedRange)
+                  const dateRange = getRangeLegacy(selectedRange)
                   return dateRange 
                     ? ` AND happened_at::date BETWEEN '${format(dateRange.start, 'yyyy-MM-dd')}' AND '${format(dateRange.end, 'yyyy-MM-dd')}'`
                     : ' -- (no date filter for "all")'

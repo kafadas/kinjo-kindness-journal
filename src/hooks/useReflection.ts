@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { startOfDay, subDays, format } from 'date-fns';
+import { getRange, type Period } from '@/lib/dateRange';
 
-export type ReflectionPeriod = '7d' | '30d' | '90d' | '365d';
+export type ReflectionPeriod = Period;
 
 interface ReflectionData {
   id: string;
@@ -19,34 +19,15 @@ interface ReflectionData {
   regenerated_at: string;
 }
 
-// Helper to compute date range for period
+// Helper to compute date range for period using unified logic
 export const computePeriodDateRange = (period: ReflectionPeriod, timezone: string = 'UTC') => {
-  const now = new Date();
-  let start: Date;
-  let end: Date = startOfDay(now);
-
-  switch (period) {
-    case '7d':
-      start = startOfDay(subDays(now, 6));
-      break;
-    case '30d':
-      start = startOfDay(subDays(now, 29));
-      break;
-    case '90d':
-      start = startOfDay(subDays(now, 89));
-      break;
-    case '365d':
-      start = startOfDay(subDays(now, 364));
-      break;
-    default:
-      start = startOfDay(subDays(now, 6));
-  }
-
+  const range = getRange(period, timezone);
+  
   return {
-    start: format(start, 'yyyy-MM-dd'),
-    end: format(end, 'yyyy-MM-dd'),
-    startDate: start,
-    endDate: end
+    start: range.start.toISOString().split('T')[0],
+    end: range.end.toISOString().split('T')[0],
+    startDate: range.start,
+    endDate: range.end
   };
 };
 

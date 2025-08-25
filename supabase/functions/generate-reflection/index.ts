@@ -69,33 +69,71 @@ serve(async (req) => {
       try {
         console.log('Attempting AI generation...');
         
-        // Get anonymized context for AI
-        const { data: moments } = await supabaseClient
-          .from('moments')
-          .select(`
-            action,
-            significance,
-            happened_at,
-            category:categories(name)
-          `)
-          .eq('user_id', user.id)
-          .gte('happened_at', `${period === '7d' ? '7' : period === '30d' ? '30' : period === '90d' ? '90' : '365'} days ago`)
-          .order('happened_at', { ascending: false });
+        // Get user timezone and calculate date range using the new utility
+        const { data: userTimezone } = await supabaseClient.rpc('get_user_timezone', { p_user: user.id });
+        const timezone = userTimezone || 'UTC';
+        
+        // Use new getRange utility for consistent date calculations
+        const dateRange = { start: new Date(), end: new Date(), period };
+        const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
+        dateRange.end = new Date();
+        dateRange.start = new Date(dateRange.end);
+        dateRange.start.setDate(dateRange.start.getDate() - (days - 1));
+        
+        // Use moments_in_range helper for consistent timezone handling
+        const { data: moments, error: momentsError } = await supabaseClient.rpc('moments_in_range', {
+          p_user: user.id,
+          p_start: dateRange.start.toISOString().split('T')[0],
+          p_end: dateRange.end.toISOString().split('T')[0],  
+          p_tz: timezone
+        });
+
+        if (momentsError) {
+          console.error('Error fetching moments:', momentsError);
+          throw momentsError;
+        }
+
+        // Get related data for context (categories)
+        const momentIds = moments?.map(m => m.id) || [];
+        const { data: categories } = momentIds.length > 0 ? await supabaseClient
+          .from('categories')
+          .select('id, name')
+          .in('id', moments?.map(m => m.category_id).filter(Boolean) || []) : { data: [] };
+
+        // Create category lookup
+        const categoryLookup = categories?.reduce((acc, cat) => {
+          acc[cat.id] = cat;
+          return acc;
+        }, {} as Record<string, any>) || {};
+
+        // Add category info to moments
+        const momentsWithCategories = moments?.map(m => ({
+          ...m,
+          category: m.category_id ? categoryLookup[m.category_id] : null
+        })) || [];
+
+        // Count assertion - verify our data matches what we'll display
+        console.log(`AI reflection data: ${momentsWithCategories?.length || 0} moments for period ${period}`);
+        
+        if (!momentsWithCategories || momentsWithCategories.length === 0) {
+          console.log('No moments found for AI reflection - falling back to rule-based');
+          throw new Error('No moments for AI generation');
+        }
 
         // Prepare anonymized context
         const context = {
           period,
-          totalMoments: moments?.length || 0,
-          givenCount: moments?.filter(m => m.action === 'given').length || 0,
-          receivedCount: moments?.filter(m => m.action === 'received').length || 0,
-          significantCount: moments?.filter(m => m.significance).length || 0,
-          topCategory: moments?.reduce((acc, m) => {
+          totalMoments: momentsWithCategories?.length || 0,
+          givenCount: momentsWithCategories?.filter(m => m.action === 'given').length || 0,
+          receivedCount: momentsWithCategories?.filter(m => m.action === 'received').length || 0,
+          significantCount: momentsWithCategories?.filter(m => m.significance).length || 0,
+          topCategory: momentsWithCategories?.reduce((acc, m) => {
             if (m.category?.name) {
               acc[m.category.name] = (acc[m.category.name] || 0) + 1;
             }
             return acc;
           }, {} as Record<string, number>),
-          activeDays: new Set(moments?.map(m => m.happened_at?.split('T')[0]) || []).size
+          activeDays: new Set(momentsWithCategories?.map(m => m.happened_at?.split('T')[0]) || []).size
         };
 
         // Get top category
@@ -131,14 +169,17 @@ serve(async (req) => {
           const aiResult = JSON.parse(aiData.choices[0].message.content);
           console.log('AI generation successful');
           
+          // Use period_bounds with user's timezone for consistency
+          const { data: bounds } = await supabaseClient.rpc('period_bounds', { p_period: period, p_tz: timezone });
+          
           // Create reflection with AI content
           const { data: aiReflection, error: insertError } = await supabaseClient
             .from('reflections')
             .upsert({
               user_id: user.id,
               period,
-              range_start: (await supabaseClient.rpc('period_bounds', { p_period: period, p_tz: tz })).data?.[0]?.d_start,
-              range_end: (await supabaseClient.rpc('period_bounds', { p_period: period, p_tz: tz })).data?.[0]?.d_end,
+              range_start: bounds?.[0]?.d_start,
+              range_end: bounds?.[0]?.d_end,
               summary: aiResult.summary,
               suggestions: aiResult.suggestions,
               model: 'ai',
@@ -174,7 +215,7 @@ serve(async (req) => {
       const { data: rpcResult, error: rpcError } = await supabaseClient
         .rpc('get_or_generate_reflection', {
           p_period: period,
-          p_tz: tz
+          p_tz: timezone || tz // Use detected timezone or fallback
         });
 
       if (rpcError) {

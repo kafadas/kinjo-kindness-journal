@@ -35,7 +35,7 @@ import type { MomentWithRelations } from '@/lib/db/types';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { usePeople } from '@/hooks/usePeople';
 import { useCategories } from '@/hooks/useCategories';
-import { getRange, RANGE_OPTIONS, type DateRangeLabel } from '@/lib/dateRange';
+import { RANGE_OPTIONS, getRangeLegacy, type DateRangeLabel } from '@/lib/dateRange';
 import { cn } from '@/lib/utils';
 
 export const Timeline: React.FC = () => {
@@ -185,7 +185,7 @@ export const Timeline: React.FC = () => {
     // Check if current range matches any of the predefined ranges
     for (const option of RANGE_OPTIONS) {
       if (option.label === 'all') continue;
-      const range = getRange(option.label);
+      const range = getRangeLegacy(option.label);
       if (range && 
           appliedFilters.dateRange.from.getTime() === range.start.getTime() &&
           Math.abs(appliedFilters.dateRange.to.getTime() - range.end.getTime()) < 60000) { // Allow 1 minute tolerance
@@ -222,7 +222,7 @@ export const Timeline: React.FC = () => {
 
   // Quick filter handlers for header chips
   const setQuickDateRange = useCallback((rangeLabel: DateRangeLabel) => {
-    const range = getRange(rangeLabel);
+    const range = getRangeLegacy(rangeLabel);
     const newFilters = { ...draftFilters };
     if (range) {
       newFilters.dateRange = { from: range.start, to: range.end };

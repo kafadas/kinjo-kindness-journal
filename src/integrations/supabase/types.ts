@@ -610,6 +610,10 @@ export type Database = {
           min_date: string
         }[]
       }
+      get_user_timezone: {
+        Args: { p_user: string }
+        Returns: string
+      }
       given_received_by_category: {
         Args: { _from: string; _to: string; _user: string }
         Returns: {
@@ -631,6 +635,28 @@ export type Database = {
           category_id: string
           median_days: number
           name: string
+        }[]
+      }
+      moment_date_local: {
+        Args: { ts: string; tz: string }
+        Returns: string
+      }
+      moments_in_range: {
+        Args: { p_end: string; p_start: string; p_tz: string; p_user: string }
+        Returns: {
+          action: Database["public"]["Enums"]["action_t"]
+          attachment_count: number | null
+          category_id: string | null
+          created_at: string | null
+          description: string | null
+          happened_at: string
+          id: string
+          person_id: string | null
+          significance: boolean | null
+          source: string | null
+          tags: string[] | null
+          updated_at: string | null
+          user_id: string
         }[]
       }
       monthly_overview: {
