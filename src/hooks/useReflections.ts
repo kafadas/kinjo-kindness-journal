@@ -11,6 +11,33 @@ interface ReflectionData {
   suggestions: string;
   source: 'ai' | 'fallback';
   created_at?: string;
+  // Rich insights data
+  kindnessBalance?: {
+    given: number;
+    received: number;
+  };
+  activityHeatMap?: Array<{
+    date: string;
+    count: number;
+    intensity: number;
+  }>;
+  dailySparkline?: Array<{
+    date: string;
+    count: number;
+  }>;
+  previousReflections?: Array<{
+    summary: string;
+    suggestions: string;
+    range_start: string;
+    range_end: string;
+    created_at: string;
+    source: string;
+  }>;
+  insights?: {
+    weeklyPatterns: any;
+    streakData: any;
+    microKindness: string | null;
+  };
 }
 
 export const useReflections = (rangeLabel: '7d' | '30d' | '90d' = '7d') => {
