@@ -547,6 +547,38 @@ export type Database = {
           total: number
         }[]
       }
+      generate_reflection_period: {
+        Args: { p_period: string; p_tz?: string; p_user: string }
+        Returns: {
+          computed: Json
+          created_at: string
+          id: string
+          model: string
+          period: string
+          range_end: string
+          range_start: string
+          regenerated_at: string
+          suggestions: string
+          summary: string
+          user_id: string
+        }[]
+      }
+      get_reflection_period: {
+        Args: { p_period: string; p_tz?: string; p_user: string }
+        Returns: {
+          computed: Json
+          created_at: string
+          id: string
+          model: string
+          period: string
+          range_end: string
+          range_start: string
+          regenerated_at: string
+          suggestions: string
+          summary: string
+          user_id: string
+        }[]
+      }
       get_user_moment_date_range: {
         Args: { p_user: string }
         Returns: {
